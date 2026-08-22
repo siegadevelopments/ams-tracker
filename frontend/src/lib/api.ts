@@ -434,6 +434,52 @@ class ApiClient {
   async getCurrentShiftActivities(): Promise<{ data: ShiftActivity[] }> {
     return this.request<{ data: ShiftActivity[] }>("/tickets/activities/current");
   }
+
+  // Reports & Data Exports
+  async getAttendanceReport(params?: { start_date?: string; end_date?: string }): Promise<{
+    data: {
+      total_shifts: number;
+      total_late_shifts: number;
+      total_late_minutes: number;
+      total_overtime_minutes: number;
+    };
+  }> {
+    const searchParams = new URLSearchParams();
+    if (params?.start_date) searchParams.set("start_date", params.start_date);
+    if (params?.end_date) searchParams.set("end_date", params.end_date);
+
+    const queryString = searchParams.toString();
+    return this.request(`/reports/attendance${queryString ? `?${queryString}` : ""}`);
+  }
+
+  async exportReportCsv(endpoint: "attendance" | "tickets", params?: { start_date?: string; end_date?: string }): Promise<void> {
+    const searchParams = new URLSearchParams();
+    if (params?.start_date) searchParams.set("start_date", params.start_date);
+    if (params?.end_date) searchParams.set("end_date", params.end_date);
+
+    const queryString = searchParams.toString();
+    const token = typeof window !== "undefined" ? localStorage.getItem("ams_access_token") : null;
+
+    const response = await fetch(`${API_BASE_URL}/reports/${endpoint}/export${queryString ? `?${queryString}` : ""}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to download CSV report");
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${endpoint}_report_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }
 }
 
 export const api = new ApiClient();

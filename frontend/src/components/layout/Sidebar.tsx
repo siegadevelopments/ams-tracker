@@ -23,12 +23,7 @@ const navItems: NavItem[] = [
   { label: "My Shift", href: "/my-shift", icon: "⏱️" },
   { label: "Attendance", href: "/attendance", icon: "📋", roles: ["SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD", "VIEWER"] },
   { label: "Tickets", href: "/tickets", icon: "🎫" },
-  // { label: "Handover", href: "/handover", icon: "🤝" },
-  // Phase 3:
-  // { label: "SLA", href: "/sla", icon: "⚡" },
-  // { label: "Monitoring", href: "/monitoring", icon: "🔍" },
-  // Phase 4:
-  // { label: "Reports", href: "/reports", icon: "📈" },
+  { label: "Reports", href: "/reports", icon: "📈", roles: ["SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD"] },
   { label: "Team", href: "/team", icon: "👥", section: "manage", roles: ["SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD"] },
   { label: "Settings", href: "/settings", icon: "⚙️", section: "manage", roles: ["SUPER_ADMIN"] },
   // { label: "Audit Logs", href: "/audit", icon: "📜", section: "manage", roles: ["SUPER_ADMIN", "AMS_MANAGER"] },
