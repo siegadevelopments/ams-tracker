@@ -5,7 +5,7 @@ Creates all Phase 1 tables and seeds:
 - Roles (SUPER_ADMIN, AMS_MANAGER, TEAM_LEAD, AGENT, VIEWER)
 - Permissions
 - Role-permission mappings
-- Default admin user (admin@ams.local / Admin@123!)
+- Default admin user (admin@lotuss.com / Admin@123!)
 - Default shift types (Morning, Afternoon, Night)
 """
 
@@ -317,7 +317,7 @@ def _seed_admin_user():
 
     op.execute(users_table.insert().values(
         id=uuid.uuid4(),
-        email="admin@ams.local",
+        email="admin@lotuss.com",
         password_hash=pwd_context.hash("Admin@123!"),
         first_name="System",
         last_name="Administrator",

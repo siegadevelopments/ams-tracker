@@ -153,7 +153,7 @@ export default function DashboardPage() {
                         </td>
                         <td><StatusBadge status={emp.status} /></td>
                         <td>
-                          {emp.late_minutes > 0 ? (
+                          {(emp.late_minutes ?? 0) > 0 ? (
                             <span className="text-amber-600 font-medium">{emp.late_minutes}</span>
                           ) : (
                             "—"

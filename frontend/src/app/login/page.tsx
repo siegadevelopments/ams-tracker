@@ -65,7 +65,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 className="form-input"
-                placeholder="admin@ams.local"
+                placeholder="admin@lotuss.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -107,7 +107,7 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-6 text-center text-xs text-slate-400">
-            Default: admin@ams.local / Admin@123!
+            Default: admin@lotuss.com / Admin@123!
           </p>
         </div>
 

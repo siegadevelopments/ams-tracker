@@ -17,7 +17,7 @@ from app.core.exceptions import (
     UnauthorizedError,
     ValidationError,
 )
-from app.routers import auth, attendance, health, shifts, teams, users
+from app.routers import attendance, auth, health, shifts, teams, tickets, users
 
 settings = get_settings()
 
@@ -104,6 +104,7 @@ def create_app() -> FastAPI:
     app.include_router(teams.router)
     app.include_router(shifts.router)
     app.include_router(attendance.router)
+    app.include_router(tickets.router)
 
     return app
 

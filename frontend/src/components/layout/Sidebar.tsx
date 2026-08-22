@@ -22,9 +22,7 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "📊" },
   { label: "My Shift", href: "/my-shift", icon: "⏱️" },
   { label: "Attendance", href: "/attendance", icon: "📋", roles: ["SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD", "VIEWER"] },
-  // Phase 2:
-  // { label: "Activities", href: "/activities", icon: "📝" },
-  // { label: "Tickets", href: "/tickets", icon: "🎫" },
+  { label: "Tickets", href: "/tickets", icon: "🎫" },
   // { label: "Handover", href: "/handover", icon: "🤝" },
   // Phase 3:
   // { label: "SLA", href: "/sla", icon: "⚡" },

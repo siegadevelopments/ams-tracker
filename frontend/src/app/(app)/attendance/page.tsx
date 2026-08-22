@@ -162,16 +162,16 @@ export default function AttendancePage() {
                           : "—"}
                       </td>
                       <td>
-                        {record.late_minutes > 0 ? (
+                        {(record.late_minutes ?? 0) > 0 ? (
                           <span className="text-amber-600 font-medium">{record.late_minutes}m</span>
                         ) : "—"}
                       </td>
                       <td>
-                        {record.overtime_minutes > 0 ? (
+                        {(record.overtime_minutes ?? 0) > 0 ? (
                           <span className="text-blue-600">{record.overtime_minutes}m</span>
                         ) : "—"}
                       </td>
-                      <td>{record.total_break_minutes > 0 ? `${record.total_break_minutes}m` : "—"}</td>
+                      <td>{(record.total_break_minutes ?? 0) > 0 ? `${record.total_break_minutes}m` : "—"}</td>
                       <td><StatusBadge status={record.status} /></td>
                     </tr>
                   ))}

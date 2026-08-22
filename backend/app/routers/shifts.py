@@ -200,9 +200,9 @@ async def create_bulk_schedules(
 
 @router.get("/my-schedule")
 async def get_my_schedule(
+    current_user: Annotated[User, Depends(get_current_user)],
     start_date: date | None = None,
     end_date: date | None = None,
-    current_user: Annotated[User, Depends(get_current_user)] = None,
     db: AsyncSession = Depends(get_db_session),
 ):
     """Get own schedule."""

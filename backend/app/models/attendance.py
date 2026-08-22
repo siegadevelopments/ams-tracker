@@ -5,12 +5,17 @@ All timestamps stored in UTC. Display conversion happens in the API/UI layer.
 
 import uuid
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base, TimestampMixin, generate_uuid
+
+if TYPE_CHECKING:
+    from app.models.shift import ShiftSchedule
+    from app.models.user import User
 
 
 class AttendanceRecord(Base, TimestampMixin):

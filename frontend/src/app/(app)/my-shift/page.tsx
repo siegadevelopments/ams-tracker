@@ -2,22 +2,30 @@
 
 /**
  * My Shift page — the employee's primary workspace.
- * 1-click start/end shift, break controls, current shift status.
+ * 1-click start/end shift, break controls, shift activities & ticket logging.
  * "Can I complete my required reporting in less than two minutes?" — YES.
  */
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
-import api, { AttendanceRecord, ShiftSchedule, ApiError } from "@/lib/api";
+import api, { AttendanceRecord, ShiftSchedule, ShiftActivity, ApiError } from "@/lib/api";
 
 export default function MyShiftPage() {
   const { user } = useAuth();
   const [attendance, setAttendance] = useState<AttendanceRecord | null>(null);
   const [shiftStatus, setShiftStatus] = useState<string>("loading"); // loading, no_shift, active, ended
   const [todaySchedule, setTodaySchedule] = useState<ShiftSchedule | null>(null);
+  const [activities, setActivities] = useState<ShiftActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [activityLoading, setActivityLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [newActivity, setNewActivity] = useState({
+    activity_type: "INCIDENT",
+    description: "",
+    duration_minutes: 15,
+  });
 
   const loadState = useCallback(async () => {
     try {
@@ -26,9 +34,11 @@ export default function MyShiftPage() {
       if (attResult.data) {
         setAttendance(attResult.data);
         setShiftStatus(attResult.data.actual_end_utc ? "ended" : "active");
+        loadActivities();
       } else {
         setAttendance(null);
         setShiftStatus("no_shift");
+        setActivities([]);
       }
 
       // Get today's schedule
@@ -43,6 +53,15 @@ export default function MyShiftPage() {
       setLoading(false);
     }
   }, []);
+
+  const loadActivities = async () => {
+    try {
+      const res = await api.getCurrentShiftActivities();
+      setActivities(res.data);
+    } catch {
+      // Non-blocking
+    }
+  };
 
   useEffect(() => {
     loadState();
@@ -101,6 +120,22 @@ export default function MyShiftPage() {
     }
   };
 
+  const handleLogActivity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newActivity.description.trim()) return;
+
+    setActivityLoading(true);
+    try {
+      await api.logShiftActivity(newActivity);
+      setNewActivity({ activity_type: "INCIDENT", description: "", duration_minutes: 15 });
+      await loadActivities();
+    } catch (err) {
+      setError((err as ApiError).message || "Failed to log activity");
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -108,9 +143,6 @@ export default function MyShiftPage() {
       </div>
     );
   }
-
-  const isOnBreak = attendance && !attendance.actual_end_utc && shiftStatus === "active";
-  // We'd need break data from the attendance record to truly know, but for now approximate
 
   return (
     <div>
@@ -128,39 +160,52 @@ export default function MyShiftPage() {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+        <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm">
           {error}
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Shift Control Card */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h2 className="font-semibold text-slate-900 mb-4">Shift Control</h2>
-
-          {/* Today's schedule info */}
-          {todaySchedule && (
-            <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-100">
-              <p className="text-sm font-medium text-blue-900">
-                {todaySchedule.shift_type_name}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Shift Action Card */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+            <div>
+              <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+                Scheduled Shift
               </p>
-              <p className="text-sm text-blue-700">
-                {todaySchedule.scheduled_start} — {todaySchedule.scheduled_end}
-                {todaySchedule.crosses_midnight && " (overnight)"}
+              <p className="text-lg font-bold text-slate-900 mt-1">
+                {todaySchedule ? (
+                  <>
+                    {todaySchedule.shift_type_name} ({todaySchedule.scheduled_start} - {todaySchedule.scheduled_end})
+                  </>
+                ) : (
+                  "Standard Day Shift"
+                )}
               </p>
             </div>
-          )}
+            <div className="text-right">
+              <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+                Employee
+              </p>
+              <p className="text-sm font-medium text-slate-700 mt-1">
+                {user?.first_name} {user?.last_name}
+              </p>
+            </div>
+          </div>
 
           {shiftStatus === "no_shift" && (
             <div className="text-center py-8">
-              <p className="text-slate-500 mb-4">
-                {todaySchedule ? "Ready to start your shift" : "No shift scheduled for today"}
+              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+                ⏱️
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">Ready to start your shift?</h3>
+              <p className="text-sm text-slate-500 mt-1 mb-6">
+                Click below to clock in. Your start time and punctuality are calculated automatically.
               </p>
               <button
                 onClick={handleStartShift}
                 disabled={actionLoading}
-                className="btn btn-success btn-lg"
-                style={{ minWidth: "200px" }}
+                className="btn btn-primary btn-lg px-8"
               >
                 {actionLoading ? "Starting..." : "▶ Start Shift"}
               </button>
@@ -169,58 +214,92 @@ export default function MyShiftPage() {
 
           {shiftStatus === "active" && attendance && (
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-                <span className="text-sm font-medium text-green-700">Shift Active</span>
-              </div>
-
-              <div className="space-y-2 mb-6 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Started at</span>
-                  <span className="font-medium">
-                    {attendance.actual_start_utc
-                      ? new Date(attendance.actual_start_utc).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "—"}
-                  </span>
-                </div>
-                {attendance.late_minutes > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Late</span>
-                    <span className="text-amber-600 font-medium">
-                      {attendance.late_minutes} min
-                    </span>
+              <div className="flex items-center justify-between p-4 rounded-lg bg-green-50 border border-green-200 mb-6">
+                <div className="flex items-center gap-3">
+                  <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
+                  <div>
+                    <p className="font-semibold text-green-900">Shift In Progress</p>
+                    <p className="text-xs text-green-700">
+                      Clocked in at{" "}
+                      {attendance.actual_start_utc
+                        ? new Date(attendance.actual_start_utc).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "—"}
+                    </p>
                   </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Break time</span>
-                  <span>{attendance.total_break_minutes} min</span>
                 </div>
+                <span className="badge badge-success">Active</span>
               </div>
 
-              <div className="flex gap-3">
+              <div className="grid grid-cols-2 gap-4 mb-6">
                 <button
                   onClick={handleStartBreak}
                   disabled={actionLoading}
-                  className="btn btn-outline flex-1"
+                  className="btn btn-outline"
                 >
                   ☕ Start Break
                 </button>
                 <button
                   onClick={handleEndBreak}
                   disabled={actionLoading}
-                  className="btn btn-outline flex-1"
+                  className="btn btn-outline"
                 >
                   ↩ End Break
                 </button>
               </div>
 
+              {/* Quick Log Activity / Ticket Form */}
+              <div className="border-t border-slate-100 pt-6 mt-6">
+                <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                  <span>📝</span> Quick Activity & Ticket Logger
+                </h3>
+                <form onSubmit={handleLogActivity} className="space-y-3">
+                  <div className="flex gap-3">
+                    <select
+                      className="form-input max-w-[160px]"
+                      value={newActivity.activity_type}
+                      onChange={(e) =>
+                        setNewActivity({ ...newActivity, activity_type: e.target.value })
+                      }
+                    >
+                      <option value="INCIDENT">Incident</option>
+                      <option value="REQUEST">Service Request</option>
+                      <option value="PROBLEM">Problem</option>
+                      <option value="CHANGE">Change</option>
+                      <option value="MONITORING">Monitoring</option>
+                      <option value="DEPLOYMENT">Deployment</option>
+                      <option value="MEETING">Meeting</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+
+                    <input
+                      type="text"
+                      className="form-input flex-1"
+                      placeholder="e.g. Investigated P1 server memory spike..."
+                      value={newActivity.description}
+                      onChange={(e) =>
+                        setNewActivity({ ...newActivity, description: e.target.value })
+                      }
+                      required
+                    />
+
+                    <button
+                      type="submit"
+                      disabled={activityLoading}
+                      className="btn btn-primary text-sm px-4"
+                    >
+                      {activityLoading ? "Saving..." : "Log Activity"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
               <button
                 onClick={handleEndShift}
                 disabled={actionLoading}
-                className="btn btn-danger btn-lg w-full mt-4"
+                className="btn btn-danger btn-lg w-full mt-6"
               >
                 {actionLoading ? "Ending..." : "⏹ End Shift"}
               </button>
@@ -228,83 +307,54 @@ export default function MyShiftPage() {
           )}
 
           {shiftStatus === "ended" && attendance && (
-            <div className="text-center py-4">
-              <div className="inline-flex items-center gap-2 mb-4">
-                <span className="text-xl">✓</span>
-                <span className="font-medium text-slate-700">Shift Completed</span>
+            <div className="text-center py-6">
+              <div className="w-12 h-12 bg-green-100 text-green-700 rounded-full flex items-center justify-center mx-auto mb-3 text-xl font-bold">
+                ✓
               </div>
-
-              <div className="space-y-2 text-sm mb-4">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Duration</span>
-                  <span className="font-medium">
-                    {attendance.actual_start_utc && attendance.actual_end_utc
-                      ? (() => {
-                          const ms =
-                            new Date(attendance.actual_end_utc).getTime() -
-                            new Date(attendance.actual_start_utc).getTime();
-                          const hrs = Math.floor(ms / 3600000);
-                          const mins = Math.floor((ms % 3600000) / 60000);
-                          return `${hrs}h ${mins}m`;
-                        })()
-                      : "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Status</span>
-                  <span className={`badge ${attendance.status === "ON_TIME" || attendance.status === "OVERTIME" ? "badge-success" : "badge-warning"}`}>
-                    {attendance.status.replace("_", " ")}
-                  </span>
-                </div>
-                {attendance.overtime_minutes > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Overtime</span>
-                    <span className="text-blue-600">{attendance.overtime_minutes} min</span>
-                  </div>
-                )}
-              </div>
+              <h3 className="text-lg font-bold text-slate-900">Shift Completed</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Great job today! Your shift activity log has been saved.
+              </p>
             </div>
           )}
         </div>
 
-        {/* Status Card */}
+        {/* Right Sidebar: Shift Logged Activities */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h2 className="font-semibold text-slate-900 mb-4">Today&apos;s Summary</h2>
+          <h2 className="font-semibold text-slate-900 mb-4 flex items-center justify-between">
+            <span>Logged Shift Activities</span>
+            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
+              {activities.length}
+            </span>
+          </h2>
 
-          <div className="space-y-4">
-            <div className="p-3 rounded-lg bg-slate-50">
-              <p className="text-sm text-slate-500">Attendance Status</p>
-              <p className="text-lg font-semibold mt-1">
-                {attendance ? (
-                  <span className={`badge ${
-                    attendance.status === "ON_TIME" ? "badge-success" :
-                    attendance.status === "LATE" ? "badge-warning" :
-                    attendance.status === "OVERTIME" ? "badge-info" :
-                    "badge-neutral"
-                  }`}>
-                    {attendance.status.replace("_", " ")}
-                  </span>
-                ) : (
-                  <span className="badge badge-neutral">No record</span>
-                )}
-              </p>
+          {activities.length === 0 ? (
+            <div className="p-6 text-center text-slate-400 text-sm border border-dashed rounded-lg">
+              No activities logged for this shift yet.
             </div>
-
-            {/* Placeholder for Phase 2 */}
-            <div className="p-3 rounded-lg bg-slate-50">
-              <p className="text-sm text-slate-500">Activities</p>
-              <p className="text-sm text-slate-400 mt-1">
-                Activity logging coming in Phase 2
-              </p>
+          ) : (
+            <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+              {activities.map((act) => (
+                <div
+                  key={act.id}
+                  className="p-3 rounded-lg border border-slate-100 bg-slate-50 text-sm"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-xs text-blue-600 uppercase">
+                      {act.activity_type}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {new Date(act.start_time).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                  <p className="text-slate-800 text-xs font-medium">{act.description}</p>
+                </div>
+              ))}
             </div>
-
-            <div className="p-3 rounded-lg bg-slate-50">
-              <p className="text-sm text-slate-500">Handover</p>
-              <p className="text-sm text-slate-400 mt-1">
-                Handover management coming in Phase 2
-              </p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

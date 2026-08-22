@@ -4,12 +4,16 @@ Team and TeamMember ORM models.
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base, TimestampMixin, generate_uuid
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class Team(Base, TimestampMixin):

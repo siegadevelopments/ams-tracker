@@ -5,6 +5,7 @@ Handles cross-midnight shifts (e.g., 22:00–06:00) as a single shift record.
 
 import uuid
 from datetime import date, datetime, time
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -21,6 +22,11 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base, TimestampMixin, generate_uuid
+
+if TYPE_CHECKING:
+    from app.models.attendance import AttendanceRecord
+    from app.models.team import Team
+    from app.models.user import User
 
 
 class ShiftType(Base, TimestampMixin):

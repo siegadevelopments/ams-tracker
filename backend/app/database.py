@@ -2,10 +2,11 @@
 SQLAlchemy async engine, session factory, and declarative Base.
 """
 
+from collections.abc import AsyncGenerator
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import MetaData, func
+from sqlalchemy import DateTime, MetaData, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -47,11 +48,13 @@ class TimestampMixin:
     """Mixin adding created_at and updated_at columns."""
 
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
         default=None,
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=True,
@@ -63,7 +66,7 @@ def generate_uuid() -> uuid.UUID:
     return uuid.uuid4()
 
 
-async def get_db_session() -> AsyncSession:
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """Dependency: yields a database session, auto-closes on exit."""
     async with async_session_factory() as session:
         try:
