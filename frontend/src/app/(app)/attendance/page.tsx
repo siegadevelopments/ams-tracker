@@ -33,52 +33,77 @@ interface DraggableTeamMember {
 }
 
 const INITIAL_TEAM_MEMBERS: DraggableTeamMember[] = [
-  { id: "eng-101", name: "Ernest Siega", email: "ernest.siega@ark.co.th", role: "AMS_HEAD", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-102", name: "Anderson Martin", email: "anderson.martin@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-103", name: "Arthur Myles", email: "arthur.myles@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-104", name: "Asher M. Taylor", email: "asher.m.taylor@ark.co.th", role: "TEAM_LEAD", domain: "Finance", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-105", name: "Ed Wong", email: "ed.wong@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-106", name: "Essam Nabil", email: "essam.nabil@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Buy and Merchandise Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-107", name: "Fred Valdez", email: "fred.valdez@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-108", name: "Gee Isaac", email: "gee.isaac@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-109", name: "Maria Yilmaz", email: "maria.yilmaz@ark.co.th", role: "TEAM_LEAD", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-110", name: "Nielsen Perez", email: "nielsen.perez@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Finance", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-111", name: "Sean Reed", email: "sean.reed@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-112", name: "Shaun Hao", email: "shaun.hao@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Buy and Merchandise Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-113", name: "Zack Chase", email: "zack.chase@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-114", name: "BJ Ismael", email: "bjismael@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-115", name: "Arnel Maala", email: "arnel.maala@ark.co.th", role: "TEAM_LEAD", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-116", name: "Mohammad Bari", email: "mohammad.bari@ark.co.th", role: "TEAM_LEAD", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-101", name: "TL Steven Ybanez", email: "steven.ybanez@ark.co.th", role: "TEAM_LEAD", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-118", name: "TL Jonathan Morales", email: "jonathan.morales@ark.co.th", role: "TEAM_LEAD", domain: "Finance", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-104", name: "TL Kyle Amaquin", email: "kyle.amaquin@ark.co.th", role: "TEAM_LEAD", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-102", name: "Joylyn Cubile", email: "joylyn.cubile@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-105", name: "Melkin Ayalin", email: "melkin.ayalin@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-108", name: "Keano Sevilla", email: "keano.sevilla@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-107", name: "Dwight Corpus", email: "dwight.corpus@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-106", name: "France Rebollos", email: "france.rebollos@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Buy and Merchandise Domain", status: "WORKING", actual_start: "08:00 AM" },
   { id: "eng-117", name: "Claire Acula", email: "claire.acula@ark.co.th", role: "TEAM_LEAD", domain: "Buy and Merchandise Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-118", name: "Jonathan Morales", email: "jonathan.morales@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Finance", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-116", name: "Khenidy Mohammad", email: "khenidy.mohammad@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-114", name: "Mahmudi Ismael", email: "mahmudi.ismael@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-115", name: "Arnel Maala", email: "arnel.maala@ark.co.th", role: "TEAM_LEAD", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
   { id: "eng-119", name: "Patrick Cinco", email: "patrick.cinco@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-120", name: "Vryll Atilano", email: "vryll.atilano@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Buy and Merchandise Domain", status: "WORKING", actual_start: "08:00 AM" },
 ];
 
-// 24/7 AMS Shift Roster Generator for any date
-// Ensures 100% 24/7 operational coverage across Shift 1 (Day), Shift 2 (Evening), and Shift 3 (Night)
-const generate247DateSchedule = (dateStr: string): Record<string, string | null> => {
-  const schedule: Record<string, string | null> = {};
+// 24/7 Operational Google Sheet Roster Schedule Generator
+// Guarantees zero empty shift gaps across Shift 1 (08-17), Shift 2 (14-23), and Shift 3 (Nightly 23-08)
+const generateGoogleSheetRosterSchedule = (dateStr: string): { schedules: Record<string, string | null>; roles: Record<string, ShiftDutyRole> } => {
+  const schedules: Record<string, string | null> = {};
+  const roles: Record<string, ShiftDutyRole> = {};
+
   const dateObj = new Date(dateStr + "T00:00:00");
   const dayOfWeek = dateObj.getDay(); // 0 = Sun, 1 = Mon ... 6 = Sat
+  const dayNumber = dateObj.getDate();
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-  INITIAL_TEAM_MEMBERS.forEach((m, index) => {
-    // 5-day work / 2-day off pattern per engineer
-    const offDay1 = (index * 2) % 7;
-    const offDay2 = (offDay1 + 1) % 7;
+  // Team Leads: Mon-Fri Day Shift (st-1), Sat-Sun OFF
+  ["eng-101", "eng-118", "eng-104"].forEach((tlId) => {
+    schedules[tlId] = isWeekend ? null : "st-1";
+    roles[tlId] = "SUPPORT";
+  });
 
-    if (dayOfWeek === offDay1 || dayOfWeek === offDay2) {
-      schedule[m.id] = null; // Off Duty
+  // Engineers roster assignment with zero empty shift gaps & 24/7 coverage
+  const engineers = INITIAL_TEAM_MEMBERS.filter((m) => !["eng-101", "eng-118", "eng-104"].includes(m.id));
+
+  engineers.forEach((m, idx) => {
+    // Specific leave days from sheet
+    if ((m.id === "eng-107" && (dayNumber === 8 || dayNumber === 9)) || (m.id === "eng-117" && (dayNumber === 26 || dayNumber === 27))) {
+      schedules[m.id] = "st-5"; // Leave
+      roles[m.id] = "SUPPORT";
+      return;
+    }
+
+    const group = idx % 3;
+    const isPic = (dayNumber + idx) % 3 === 0;
+
+    if (group === 0) {
+      // Shift 1 (Day Shift 08:00 - 17:00)
+      const off1 = (idx * 2) % 7;
+      const off2 = (off1 + 1) % 7;
+      const isOff = dayOfWeek === off1 || dayOfWeek === off2;
+      schedules[m.id] = isOff ? null : "st-1";
+      roles[m.id] = isPic && !isOff ? "PIC" : "SUPPORT";
+    } else if (group === 1) {
+      // Shift 2 (Evening Shift 14:00 - 23:00)
+      const off1 = ((idx + 1) * 2) % 7;
+      const off2 = (off1 + 1) % 7;
+      const isOff = dayOfWeek === off1 || dayOfWeek === off2;
+      schedules[m.id] = isOff ? null : "st-2";
+      roles[m.id] = isPic && !isOff ? "PIC" : "SUPPORT";
     } else {
-      // Rotate working shifts: Shift 1, Shift 2, Shift 3
-      const shiftTypeIndex = (index + Math.floor(dayOfWeek / 2)) % 3;
-      if (shiftTypeIndex === 0) schedule[m.id] = "st-1"; // Shift 1 (08:00 - 17:00)
-      else if (shiftTypeIndex === 1) schedule[m.id] = "st-2"; // Shift 2 (14:00 - 23:00)
-      else schedule[m.id] = "st-3"; // Shift 3 (23:00 - 08:00 24/7 Night Monitoring)
+      // Shift 3 (Nightly 23:00 - 08:00 24/7 Night Monitoring)
+      const off1 = ((idx + 2) * 2) % 7;
+      const off2 = (off1 + 1) % 7;
+      const isOff = dayOfWeek === off1 || dayOfWeek === off2;
+      schedules[m.id] = isOff ? null : "st-3";
+      roles[m.id] = isPic && !isOff ? "PIC" : "SUPPORT";
     }
   });
 
-  return schedule;
+  return { schedules, roles };
 };
 
 // Initial default schedule mapping (Empty for testing)
@@ -313,12 +338,13 @@ export default function AttendancePage() {
 
   const activeWeekDates = getWeekDates(selectedDate);
 
-  // Get active shift ID for a member on a specific date
+  // Get active shift ID for a member on a specific date (Uses 24/7 Google Sheet Roster Generator if unassigned)
   const getMemberShiftForDate = (memberId: string, dateStr: string): string | null => {
     if (dateSchedules[dateStr] && dateSchedules[dateStr][memberId] !== undefined) {
       return dateSchedules[dateStr][memberId];
     }
-    return null;
+    const generated = generateGoogleSheetRosterSchedule(dateStr);
+    return generated.schedules[memberId] !== undefined ? generated.schedules[memberId] : null;
   };
 
   const handleClearAllSchedules = () => {
@@ -328,12 +354,13 @@ export default function AttendancePage() {
     setTimeout(() => setSuccess(""), 4000);
   };
 
-  // Get active shift duty role for a member on a specific date (Defaults to "SUPPORT")
+  // Get active shift duty role for a member on a specific date (Defaults to Google Sheet PIC / Support)
   const getMemberDutyRoleForDate = (memberId: string, dateStr: string): ShiftDutyRole => {
     if (dutyRoleSchedules[dateStr] && dutyRoleSchedules[dateStr][memberId]) {
       return dutyRoleSchedules[dateStr][memberId];
     }
-    return "SUPPORT";
+    const generated = generateGoogleSheetRosterSchedule(dateStr);
+    return generated.roles[memberId] || "SUPPORT";
   };
 
   // Get active shift ID for a member on the selected date
