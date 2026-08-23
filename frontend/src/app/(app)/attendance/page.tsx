@@ -396,21 +396,25 @@ export default function AttendancePage() {
   });
 
   // Date Navigation Handlers
-  const handlePreviousDay = () => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() - 1);
+  const handlePreviousWeek = () => {
+    const d = new Date(selectedDate + "T00:00:00");
+    d.setDate(d.getDate() - 7);
     setSelectedDate(d.toISOString().split("T")[0]);
   };
 
-  const handleNextDay = () => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + 1);
+  const handleNextWeek = () => {
+    const d = new Date(selectedDate + "T00:00:00");
+    d.setDate(d.getDate() + 7);
     setSelectedDate(d.toISOString().split("T")[0]);
   };
 
-  const handleSetToday = () => {
+  const handleSetCurrentWeek = () => {
     setSelectedDate(TODAY_DATE_STR);
   };
+
+  const weekStartObj = new Date(activeWeekDates[0] + "T00:00:00");
+  const weekEndObj = new Date(activeWeekDates[6] + "T00:00:00");
+  const formattedWeekRange = `${weekStartObj.getMonth() + 1}/${weekStartObj.getDate()}/${weekStartObj.getFullYear()} – ${weekEndObj.getMonth() + 1}/${weekEndObj.getDate()}/${weekEndObj.getFullYear()}`;
 
   const formattedSelectedDate = new Date(selectedDate + "T00:00:00").toLocaleDateString(undefined, {
     weekday: "long",
@@ -723,36 +727,43 @@ export default function AttendancePage() {
               )}
             </div>
 
-            {/* DATE PICKER & ROSTER DATE SWITCHER */}
-            <div className="flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs">
+            {/* WEEK SELECTOR & ROSTER DATE SWITCHER */}
+            <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs">
               <button
                 type="button"
-                onClick={handlePreviousDay}
+                onClick={handlePreviousWeek}
                 className="p-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                title="Previous Day"
+                title="Previous Week"
               >
                 ◀
               </button>
-              <input
-                type="date"
-                className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-              />
+              <div className="relative flex items-center">
+                <input
+                  type="date"
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  title="Click to jump to any week"
+                />
+                <div className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-black text-slate-900 bg-slate-50 flex items-center gap-2 cursor-pointer hover:bg-slate-100 transition-colors">
+                  <span>📅</span>
+                  <span>{formattedWeekRange}</span>
+                </div>
+              </div>
               <button
                 type="button"
-                onClick={handleNextDay}
+                onClick={handleNextWeek}
                 className="p-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                title="Next Day"
+                title="Next Week"
               >
                 ▶
               </button>
               <button
                 type="button"
-                onClick={handleSetToday}
+                onClick={handleSetCurrentWeek}
                 className="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-all cursor-pointer ml-1"
               >
-                Today
+                This Week
               </button>
             </div>
 
