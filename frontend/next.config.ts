@@ -1,18 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api/v1/:path*",
-        destination: "/api/index.py",
-      },
-      {
-        source: "/api/:path*",
-        destination: "/api/index.py",
-      },
-    ];
-  },
+  /* Next.js App Router configuration */
 };
 
 export default nextConfig;
