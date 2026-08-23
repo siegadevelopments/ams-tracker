@@ -57,7 +57,7 @@ const generateGoogleSheetRosterSchedule = (
   });
 
   // 2. Team Leads (TLs): Mon-Fri Shift 1 (Day Shift 08:00 - 17:00), Sat-Sun OFF
-  const teamLeads = teamList.filter((m) => (m.role === "TEAM_LEAD" || m.name.startsWith("TL ")) && !amsHeads.some((h) => h.id === m.id));
+  const teamLeads = teamList.filter((m) => m.role === "TEAM_LEAD" && !amsHeads.some((h) => h.id === m.id));
   teamLeads.forEach((tl) => {
     schedules[tl.id] = isWeekend ? null : "st-1";
     roles[tl.id] = "SUPPORT";
@@ -302,7 +302,7 @@ export default function AttendancePage() {
         if (res.data && res.data.length > 0) {
           const mapped: DraggableTeamMember[] = res.data.map((u) => ({
             id: u.id,
-            name: u.role === "TEAM_LEAD" && !u.first_name.startsWith("TL ") ? `TL ${u.first_name} ${u.last_name}` : `${u.first_name} ${u.last_name}`,
+            name: `${u.first_name} ${u.last_name}`,
             email: u.email,
             role: u.role,
             domain: u.domain || "Supply chain and Planning Domain",
