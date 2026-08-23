@@ -3,10 +3,9 @@
 /**
  * Tickets Management Page.
  * Displays AMS Incident SLA Policy, operational expectations, ticket tracking,
- * and AI-Powered Slack Duty Report Parser & Uniform Formatter!
- * - AI parses raw pasted Slack report text (any format) into a uniform, standardized AMS format.
- * - Extracts ticket numbers, titles, priorities, categories, shift handovers, and SQL queries.
- * - Automatically matches Slack author to their @ark.co.th corporate account.
+ * AI-Powered Slack Duty Report Parser & Uniform Formatter, and Shift Handover System!
+ * - Ticket Handover Rule: A team member can handover a ticket to another member on the CURRENT shift or NEXT shift,
+ *   but NEVER on an EARLIER / PAST shift!
  */
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -85,6 +84,24 @@ interface FormattedSlackReport {
   }[];
 }
 
+interface CorporateEngineer {
+  name: string;
+  email: string;
+  role: string;
+  domain: string;
+  dutyRole: "PIC" | "TECHNICAL_ADMIN" | "SUPPORT";
+  shiftType: string; // "CURRENT" | "NEXT" | "PAST"
+}
+
+const CORPORATE_ENGINEERS: CorporateEngineer[] = [
+  { name: "Anderson Martin", email: "anderson.martin@ark.co.th", role: "AMS Engineer", domain: "Supply chain and Planning Domain", dutyRole: "PIC", shiftType: "CURRENT" },
+  { name: "Kamonrat Phonwichai", email: "kamonrat.p@ark.co.th", role: "Senior Engineer", domain: "Store Ops, Sales", dutyRole: "TECHNICAL_ADMIN", shiftType: "CURRENT" },
+  { name: "Maria Santos", email: "maria.santos@ark.co.th", role: "Team Lead", domain: "Supply chain and Planning Domain", dutyRole: "PIC", shiftType: "CURRENT" },
+  { name: "Patarapol Vongsawat", email: "patarapol.v@ark.co.th", role: "Support Analyst", domain: "Finance", dutyRole: "SUPPORT", shiftType: "NEXT" },
+  { name: "Chayanon Boonmee", email: "chayanon.b@ark.co.th", role: "AMS Engineer", domain: "Integration and Middleware Domain", dutyRole: "SUPPORT", shiftType: "NEXT" },
+  { name: "Thanakorn Srivastav", email: "thanakorn.s@ark.co.th", role: "AMS Engineer", domain: "Buy and Merchandise Domain", dutyRole: "SUPPORT", shiftType: "NEXT" },
+];
+
 function PriorityBadge({ priority }: { priority: string }) {
   const colors: Record<string, string> = {
     P1: "bg-red-100 text-red-700 border-red-200",
@@ -127,6 +144,12 @@ export default function TicketsPage() {
   const [slackSyncLoading, setSlackSyncLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  // Handover Modal State
+  const [handoverTicket, setHandoverTicket] = useState<Ticket | null>(null);
+  const [selectedShiftTarget, setSelectedShiftTarget] = useState<"CURRENT" | "NEXT" | "PAST">("NEXT");
+  const [selectedTargetEmail, setSelectedTargetEmail] = useState(CORPORATE_ENGINEERS[3].email);
+  const [handoverNote, setHandoverNote] = useState("Please monitor for POG pending status. Check ix_spc_planogram query.");
 
   const [rawSlackText, setRawSlackText] = useState("");
   const [formattedReport, setFormattedReport] = useState<FormattedSlackReport | null>(null);
@@ -216,7 +239,6 @@ export default function TicketsPage() {
     return user?.email || "anderson.martin@ark.co.th";
   };
 
-  // AI-POWERED SLACK DUTY REPORT PARSER & UNIFORM FORMATTER
   const runAiSlackReportFormatter = (text: string): FormattedSlackReport => {
     const lines = text.split("\n");
     let authorName = "Anderson Martin";
@@ -226,7 +248,6 @@ export default function TicketsPage() {
 
     const matchedEmail = resolveArkCorporateEmail(authorName);
 
-    // Extract Shift & Date
     let shiftName = "Shift 1";
     let shiftTime = "8:00 AM - 5:00 PM";
     let reportDate = "08-22-2026";
@@ -240,7 +261,6 @@ export default function TicketsPage() {
     const timeMatch = text.match(/Shift Time:\s*([^\n]+)/i);
     if (timeMatch) shiftTime = timeMatch[1].trim();
 
-    // Extract Tickets
     const extractedTickets: FormattedSlackReport["tickets"] = [];
     const ticketRegex = /#(\d+)\s*-\s*([^\n]+)/g;
     let match;
@@ -277,7 +297,6 @@ export default function TicketsPage() {
       });
     }
 
-    // Extract Routines
     const routines: string[] = [];
     const routinesMatch = text.match(/Routines:\s*([^\n]+)/i);
     if (routinesMatch) {
@@ -286,12 +305,10 @@ export default function TicketsPage() {
       routines.push("NGIDS Monitoring");
     }
 
-    // Extract Handover Notes
     let handoverNotes = "For Shift 2, please continue to monitor the POG in this ticket.";
     const handoverMatch = text.match(/For Shift \d+[^.\n]+/i);
     if (handoverMatch) handoverNotes = handoverMatch[0].trim();
 
-    // Extract Code / SQL Snippet
     let sqlCodeSnippet: string | undefined = undefined;
     const sqlMatch = text.match(/(SELECT|INSERT|UPDATE|WITH)[^;]+/i);
     if (sqlMatch) {
@@ -404,6 +421,37 @@ export default function TicketsPage() {
     }, 1200);
   };
 
+  // HANDLE SHIFT TICKET HANDOVER SUBMISSION (CURRENT OR NEXT SHIFT ONLY)
+  const handleConfirmHandover = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!handoverTicket) return;
+
+    if (selectedShiftTarget === "PAST") {
+      setError("🚫 Cannot handover tickets to earlier/past shifts! Handover is restricted to current or upcoming shifts only.");
+      return;
+    }
+
+    const targetEng = CORPORATE_ENGINEERS.find((e) => e.email === selectedTargetEmail);
+    const targetName = targetEng ? targetEng.name : selectedTargetEmail;
+
+    setTickets((prev) =>
+      prev.map((t) =>
+        t.id === handoverTicket.id
+          ? {
+              ...t,
+              assignee_id: selectedTargetEmail,
+              status: "IN_PROGRESS",
+              description: `[HANDOVER to ${selectedShiftTarget} SHIFT - ${targetName} (${selectedTargetEmail})]: ${handoverNote} | Original context: ${t.description}`,
+              updated_at: new Date().toISOString(),
+            }
+          : t
+      )
+    );
+
+    setSuccessMsg(`✓ Successfully handed over ticket ${handoverTicket.ticket_number || handoverTicket.id.slice(0, 8)} to ${targetName} (${selectedTargetEmail}) for ${selectedShiftTarget === "CURRENT" ? "Current Shift" : "Next Shift"}!`);
+    setHandoverTicket(null);
+  };
+
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
     try {
       await api.updateTicket(ticketId, { status: newStatus });
@@ -413,6 +461,12 @@ export default function TicketsPage() {
     }
   };
 
+  const eligibleHandoverEngineers = CORPORATE_ENGINEERS.filter((eng) => {
+    if (selectedShiftTarget === "CURRENT") return eng.shiftType === "CURRENT";
+    if (selectedShiftTarget === "NEXT") return eng.shiftType === "NEXT" || eng.shiftType === "CURRENT";
+    return false; // Past shift is empty/blocked
+  });
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -420,7 +474,7 @@ export default function TicketsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">AMS Incident & SLA Management</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Application Management Services (AMS) defined SLAs, operational expectations, and AI Slack Report Integration
+            Application Management Services (AMS) defined SLAs, operational expectations, and Shift Handover System
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -450,6 +504,132 @@ export default function TicketsPage() {
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold flex items-center gap-2 shadow-sm animate-fade-in">
           <span>✓</span>
           <span>{successMsg}</span>
+        </div>
+      )}
+
+      {/* SHIFT TICKET HANDOVER MODAL (CURRENT OR NEXT SHIFT ONLY) */}
+      {handoverTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-100 relative">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🔄</span>
+                <h3 className="font-bold text-slate-900 text-base">Handover Ticket to Shift Engineer</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHandoverTicket(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmHandover} className="space-y-4">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Ticket to Handover</p>
+                <p className="font-bold text-sm text-slate-900 mt-0.5">
+                  <span className="font-mono text-blue-600">{handoverTicket.ticket_number || handoverTicket.id.slice(0, 8)}</span> — {handoverTicket.title}
+                </p>
+              </div>
+
+              {/* TARGET SHIFT SELECTOR */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1.5">Target Shift (Current or Next Shift Only)</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedShiftTarget("CURRENT"); if (CORPORATE_ENGINEERS[0]) setSelectedTargetEmail(CORPORATE_ENGINEERS[0].email); }}
+                    className={`p-2.5 rounded-xl border text-xs font-bold text-center transition-all ${
+                      selectedShiftTarget === "CURRENT"
+                        ? "bg-blue-50 border-blue-300 text-blue-800 shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-600"
+                    }`}
+                  >
+                    <span>🕒 Current Shift</span>
+                    <span className="block text-[10px] font-normal text-slate-500 mt-0.5">Shift 1 (Active)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedShiftTarget("NEXT"); if (CORPORATE_ENGINEERS[3]) setSelectedTargetEmail(CORPORATE_ENGINEERS[3].email); }}
+                    className={`p-2.5 rounded-xl border text-xs font-bold text-center transition-all ${
+                      selectedShiftTarget === "NEXT"
+                        ? "bg-purple-50 border-purple-300 text-purple-800 shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-600"
+                    }`}
+                  >
+                    <span>⏭️ Next Shift</span>
+                    <span className="block text-[10px] font-normal text-slate-500 mt-0.5">Shift 2 / Tomorrow</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedShiftTarget("PAST")}
+                    className={`p-2.5 rounded-xl border text-xs font-bold text-center transition-all cursor-not-allowed ${
+                      selectedShiftTarget === "PAST"
+                        ? "bg-red-50 border-red-300 text-red-800"
+                        : "bg-slate-100 border-slate-200 text-slate-400 opacity-60"
+                    }`}
+                  >
+                    <span>🚫 Earlier Shift</span>
+                    <span className="block text-[10px] font-normal text-red-500 mt-0.5">Blocked</span>
+                  </button>
+                </div>
+              </div>
+
+              {selectedShiftTarget === "PAST" ? (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-medium">
+                  ⚠️ <strong>Handover Rule Policy Violation:</strong> You cannot handover tickets to an earlier / past shift! Please select either <strong>Current Shift</strong> or <strong>Next Shift</strong>.
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Select Target Engineer (@ark.co.th)</label>
+                  <select
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-blue-500"
+                    value={selectedTargetEmail}
+                    onChange={(e) => setSelectedTargetEmail(e.target.value)}
+                    required
+                  >
+                    {eligibleHandoverEngineers.map((eng) => (
+                      <option key={eng.email} value={eng.email}>
+                        {eng.name} ({eng.email}) — {eng.dutyRole === "PIC" ? "⭐ PIC" : eng.dutyRole === "TECHNICAL_ADMIN" ? "🛠️ Tech Admin" : "👤 Support"} ({eng.domain})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Handover Instructions & Operational Notes</label>
+                <textarea
+                  rows={3}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  placeholder="Describe pending actions, monitoring steps, and SQL queries for the receiving shift..."
+                  value={handoverNote}
+                  onChange={(e) => setHandoverNote(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={selectedShiftTarget === "PAST"}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20"
+                >
+                  Confirm Shift Handover
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHandoverTicket(null)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium rounded-xl"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -898,7 +1078,14 @@ export default function TicketsPage() {
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <StatusBadge status={t.status} />
                     </td>
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap space-x-2">
+                      <button
+                        onClick={() => setHandoverTicket(t)}
+                        className="px-2.5 py-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors inline-flex items-center gap-1"
+                      >
+                        <span>🔄</span> Handover
+                      </button>
+
                       <select
                         value={t.status}
                         onChange={(e) => handleStatusChange(t.id, e.target.value)}
