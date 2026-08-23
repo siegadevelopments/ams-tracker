@@ -160,15 +160,18 @@ export default function Sidebar() {
           {/* User Profile Footer */}
           <div className="p-4 border-t border-slate-800 bg-slate-900/50">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
+              <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-md border border-blue-400/30">
                 {user?.first_name?.[0]}{user?.last_name?.[0]}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-white truncate">
                   {user?.first_name} {user?.last_name}
                 </p>
-                <p className="text-[10px] font-semibold text-blue-400 truncate">
+                <p className="text-[11px] font-semibold text-blue-400 truncate">
                   {userRole === "AMS_HEAD" || userRole === "SUPER_ADMIN" ? "AMS Head" : userRole.replace("_", " ")}
+                </p>
+                <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
+                  🏢 {(user as any)?.lotuss_name || "Lotus's Thailand HQ"}
                 </p>
               </div>
             </div>
