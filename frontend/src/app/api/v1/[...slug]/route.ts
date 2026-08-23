@@ -284,13 +284,41 @@ async function handleApiRequest(request: NextRequest, context: any) {
       return NextResponse.json(MOCK_TEAM_STATUS);
     }
 
-    // 5. Current Attendance (/attendance/current)
+    // 5. Shift Lifecycle Endpoints (/attendance/end-shift, /attendance/start-shift, etc.)
+    if (path.includes("end-shift")) {
+      const endedRecord = {
+        ...MOCK_ATTENDANCE_CURRENT.data,
+        status: "OFF_DUTY",
+        actual_end_utc: new Date().toISOString(),
+      };
+      return NextResponse.json({ data: endedRecord });
+    }
+
+    if (path.includes("start-shift")) {
+      const startedRecord = {
+        ...MOCK_ATTENDANCE_CURRENT.data,
+        status: "WORKING",
+        actual_start_utc: new Date().toISOString(),
+        actual_end_utc: null,
+      };
+      return NextResponse.json({ data: startedRecord });
+    }
+
+    if (path.includes("break")) {
+      const breakRecord = {
+        ...MOCK_ATTENDANCE_CURRENT.data,
+        status: path.includes("start") ? "ON_BREAK" : "WORKING",
+      };
+      return NextResponse.json({ data: breakRecord });
+    }
+
+    // 6. Current Attendance (/attendance/current)
     if (path.includes("attendance/current") || path === "attendance") {
       return NextResponse.json(MOCK_ATTENDANCE_CURRENT);
     }
 
-    // 6. Shift Types (/shifts/types)
-    if (path.includes("shift") || path.includes("types")) {
+    // 7. Shift Types (/shifts/types)
+    if (path.includes("shifts/types") || path.includes("shift-types") || path === "shifts/types") {
       return NextResponse.json(MOCK_SHIFT_TYPES);
     }
 
