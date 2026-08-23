@@ -327,8 +327,8 @@ export default function AttendancePage() {
   
   const [draggedMemberId, setDraggedMemberId] = useState<string | null>(null);
   const [dragOverShiftId, setDragOverShiftId] = useState<string | null>(null);
+  const [dragOverCell, setDragOverCell] = useState<{ shiftId: string; dateStr: string } | null>(null);
   const [success, setSuccess] = useState("");
-  const [viewMode, setViewMode] = useState<"calendar" | "dragdrop" | "table">("calendar");
   const [quickAssignCell, setQuickAssignCell] = useState<{ memberId: string; memberName: string; dateStr: string } | null>(null);
 
   // Selected Date State
@@ -435,6 +435,54 @@ export default function AttendancePage() {
     month: "short",
     day: "numeric",
   });
+
+  // Calendar Drag and Drop Event Handlers
+  const handleCalendarDragStart = (e: React.DragEvent, memberId: string, sourceDateStr?: string) => {
+    e.dataTransfer.setData("text/plain", JSON.stringify({ memberId, sourceDateStr }));
+    setDraggedMemberId(memberId);
+  };
+
+  const handleCalendarDragOver = (e: React.DragEvent, shiftId: string, dateStr: string) => {
+    e.preventDefault();
+    setDragOverCell({ shiftId, dateStr });
+  };
+
+  const handleCalendarDragLeave = () => {
+    setDragOverCell(null);
+  };
+
+  const handleCalendarDrop = (e: React.DragEvent, targetShiftId: string | null, targetDateStr: string) => {
+    e.preventDefault();
+    setDragOverCell(null);
+    setDraggedMemberId(null);
+
+    const payloadStr = e.dataTransfer.getData("text/plain");
+    let memberId = payloadStr;
+    try {
+      const parsed = JSON.parse(payloadStr);
+      if (parsed.memberId) memberId = parsed.memberId;
+    } catch (err) {}
+
+    if (!memberId) return;
+
+    const member = INITIAL_TEAM_MEMBERS.find((m) => m.id === memberId);
+    const shiftObj = SHIFT_OPTIONS.find((s) => s.id === targetShiftId);
+
+    setDateSchedules((prev) => ({
+      ...prev,
+      [targetDateStr]: {
+        ...(prev[targetDateStr] || {}),
+        [memberId]: targetShiftId,
+      },
+    }));
+
+    if (targetShiftId) {
+      setSuccess(`Plotted ${member?.name || "Engineer"} to ${shiftObj?.name || "Shift"} for ${targetDateStr}!`);
+    } else {
+      setSuccess(`Set ${member?.name || "Engineer"} to Off Duty for ${targetDateStr}.`);
+    }
+    setTimeout(() => setSuccess(""), 4000);
+  };
 
   // Drag and Drop Event Handlers
   const handleDragStart = (e: React.DragEvent, memberId: string) => {
@@ -779,37 +827,6 @@ export default function AttendancePage() {
                 This Week
               </button>
             </div>
-
-            {/* View Mode Selector */}
-            <div className="flex bg-slate-100 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setViewMode("calendar")}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  viewMode === "calendar" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                📅 Calendar View
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("dragdrop")}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  viewMode === "dragdrop" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                🎴 Shift Board
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("table")}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  viewMode === "table" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                📋 Roster Table
-              </button>
-            </div>
           </div>
         )}
       </div>
@@ -844,7 +861,7 @@ export default function AttendancePage() {
       )}
 
       {/* 📅 INTERACTIVE WEEKLY CALENDAR ROSTER MATRIX */}
-      {isLeadership && viewMode === "calendar" && (
+      {isLeadership && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden animate-fade-in">
           {/* Calendar Top Banner */}
           <div className="p-5 bg-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800">
@@ -939,12 +956,20 @@ export default function AttendancePage() {
                         (m) => getMemberShiftForDate(m.id, dateStr) === shift.id
                       );
                       const isSelectedDateCell = dateStr === selectedDate;
+                      const isCellHovered = dragOverCell?.shiftId === shift.id && dragOverCell?.dateStr === dateStr;
 
                       return (
                         <td
                           key={dateStr}
+                          onDragOver={(e) => handleCalendarDragOver(e, shift.id, dateStr)}
+                          onDragLeave={handleCalendarDragLeave}
+                          onDrop={(e) => handleCalendarDrop(e, shift.id, dateStr)}
                           className={`p-2.5 border-r border-slate-200 align-top transition-all relative group ${
-                            isSelectedDateCell ? "bg-blue-50/20" : ""
+                            isCellHovered
+                              ? "bg-blue-100/90 border-2 border-blue-500 shadow-md scale-[1.01]"
+                              : isSelectedDateCell
+                              ? "bg-blue-50/20"
+                              : ""
                           }`}
                         >
                           {assignedMembers.length === 0 ? (
@@ -961,10 +986,14 @@ export default function AttendancePage() {
                                 return (
                                   <div
                                     key={member.id}
+                                    draggable={isLeadership}
+                                    onDragStart={(e) => handleCalendarDragStart(e, member.id, dateStr)}
                                     onClick={() => {
                                       setQuickAssignCell({ memberId: member.id, memberName: member.name, dateStr });
                                     }}
-                                    className={`p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-2xs flex items-center justify-between gap-1.5 ${
+                                    className={`p-2 rounded-xl border text-xs font-bold transition-all shadow-2xs flex items-center justify-between gap-1.5 ${
+                                      isLeadership ? "cursor-grab active:cursor-grabbing hover:shadow-md hover:scale-[1.02]" : "cursor-pointer"
+                                    } ${
                                       shift.id === "st-1"
                                         ? "bg-blue-50/90 border-blue-200 text-blue-900 hover:bg-blue-100 hover:border-blue-300"
                                         : shift.id === "st-2"
@@ -1003,11 +1032,50 @@ export default function AttendancePage() {
               </tbody>
             </table>
           </div>
+
+          {/* UNASSIGNED ENGINEERS POOL & DRAG DRAWER */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOverCell(null); }}
+            onDrop={(e) => handleCalendarDrop(e, null, selectedDate)}
+            className="p-5 bg-slate-50 border-t border-slate-200 space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-extrabold text-slate-800 text-xs flex items-center gap-1.5">
+                <span>👥</span> Unassigned / Off Duty Pool for {formattedSelectedDate}
+              </h3>
+              <span className="text-[10px] text-slate-500 font-medium">
+                Drag any engineer card directly onto a shift cell in the calendar above!
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-2 min-h-[40px]">
+              {scopedMembers
+                .filter((m) => getMemberShiftForDate(m.id, selectedDate) === null)
+                .map((member) => (
+                  <div
+                    key={member.id}
+                    draggable={isLeadership}
+                    onDragStart={(e) => handleCalendarDragStart(e, member.id, selectedDate)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 shadow-xs hover:border-blue-500 hover:bg-blue-50 cursor-grab active:cursor-grabbing flex items-center gap-1.5 transition-all"
+                  >
+                    <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 text-[9px] font-bold flex items-center justify-center">
+                      {member.name.charAt(0)}
+                    </span>
+                    <span>{member.name}</span>
+                    <span className="text-[9px] text-slate-400">💤 Off</span>
+                  </div>
+                ))}
+
+              {scopedMembers.filter((m) => getMemberShiftForDate(m.id, selectedDate) === null).length === 0 && (
+                <span className="text-xs text-slate-400 italic">All engineers are assigned on {formattedSelectedDate}.</span>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
       {/* VIEW FOR NON-LEADERSHIP (REGULAR ENGINEERS / AGENTS) */}
-      {!isLeadership ? (
+      {!isLeadership && (
         <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-lg mx-auto shadow-xl my-12 animate-fade-in">
           <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 font-extrabold text-xl flex items-center justify-center mx-auto mb-4">
             🔒
@@ -1030,251 +1098,6 @@ export default function AttendancePage() {
               Dashboard
             </a>
           </div>
-        </div>
-      ) : (
-        /* LEADERSHIP VIEW WITH INTERACTIVE DRAG & DROP SCHEDULER FOR SELECTED DATE */
-        <div className="space-y-8">
-          {viewMode === "dragdrop" ? (
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* LEFT COLUMN: UNASSIGNED / AVAILABLE TEAM MEMBERS POOL FOR SELECTED DATE */}
-              <div
-                onDragOver={(e) => handleDragOver(e, null)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, null)}
-                className={`bg-white rounded-2xl border p-5 shadow-sm space-y-4 transition-all ${
-                  dragOverShiftId === null && draggedMemberId ? "border-blue-500 bg-blue-50/40 ring-2 ring-blue-400/20" : "border-slate-200"
-                }`}
-              >
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <div>
-                    <h2 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                      <span>👥</span> Unassigned Pool
-                    </h2>
-                    <p className="text-[11px] text-slate-500">Available for {formattedSelectedDate}</p>
-                  </div>
-                  <span className="text-xs font-extrabold bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full border border-slate-200">
-                    {scopedMembers.filter((m) => getMemberShiftForSelectedDate(m.id) === null).length}
-                  </span>
-                </div>
-
-                <div className="space-y-2.5 min-h-[300px]">
-                  {scopedMembers.filter((m) => getMemberShiftForSelectedDate(m.id) === null).length === 0 ? (
-                    <div className="p-6 text-center text-slate-400 text-xs italic border border-dashed border-slate-200 rounded-xl">
-                      All team members are scheduled for {formattedSelectedDate}! Change date to plot another day.
-                    </div>
-                  ) : (
-                    scopedMembers
-                      .filter((m) => getMemberShiftForSelectedDate(m.id) === null)
-                      .map((member) => (
-                        <div
-                          key={member.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, member.id)}
-                          className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-xs hover:shadow-md hover:border-blue-400 cursor-grab active:cursor-grabbing transition-all group"
-                        >
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                              {member.name}
-                            </p>
-                            <span className="text-[9px] font-extrabold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100">
-                              {member.role.replace("_", " ")}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-slate-500 truncate">{member.domain}</p>
-                          <p className="text-[9px] text-slate-400 mt-1 flex items-center gap-1">
-                            <span>🖐️</span> Drag to plot shift or leave
-                          </p>
-                        </div>
-                      ))
-                  )}
-                </div>
-              </div>
-
-              {/* RIGHT COLUMN: 5 OFFICIAL SCHEDULE DROP ZONES (SHIFTS 1-3, TRAINING & LEAVE) */}
-              <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {SHIFT_OPTIONS.map((shift) => {
-                  const assignedMembers = scopedMembers.filter((m) => getMemberShiftForSelectedDate(m.id) === shift.id);
-                  const isHovered = dragOverShiftId === shift.id;
-                  const isLeaveZone = shift.id === "st-5";
-
-                  return (
-                    <div
-                      key={shift.id}
-                      onDragOver={(e) => handleDragOver(e, shift.id)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, shift.id)}
-                      className={`bg-white rounded-2xl border p-5 shadow-sm space-y-4 transition-all ${
-                        isHovered
-                          ? isLeaveZone
-                            ? "border-amber-500 bg-amber-50/80 ring-2 ring-amber-500/30 scale-[1.01]"
-                            : "border-blue-500 bg-blue-50/80 ring-2 ring-blue-500/30 scale-[1.01]"
-                          : isLeaveZone
-                          ? "border-amber-200 hover:border-amber-300 bg-amber-50/20"
-                          : "border-slate-200 hover:border-slate-300"
-                      }`}
-                    >
-                      {/* Shift Zone Header */}
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-extrabold text-slate-900 text-sm">
-                              {isLeaveZone && "🌴 "}
-                              {shift.name}
-                            </h3>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                              isLeaveZone ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-blue-50 text-blue-600 border-blue-100"
-                            }`}>
-                              {shift.time}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">{shift.hours}</p>
-                        </div>
-
-                        <span className={`text-xs font-black text-white px-2.5 py-0.5 rounded-full shadow-xs ${
-                          isLeaveZone ? "bg-amber-600" : "bg-blue-600"
-                        }`}>
-                          {assignedMembers.length} Members
-                        </span>
-                      </div>
-
-                      {/* Drop Zone Member Cards */}
-                      <div className={`space-y-2.5 min-h-[160px] p-2 rounded-xl border border-dashed ${
-                        isLeaveZone ? "bg-amber-50/40 border-amber-200" : "bg-slate-50/50 border-slate-200"
-                      }`}>
-                        {assignedMembers.length === 0 ? (
-                          <div className="py-10 text-center text-slate-400 text-xs italic">
-                            {isLeaveZone ? "🌴 Drag team members here to log Approved Leave for " : "🎯 Drag team members here to schedule for "}
-                            {shift.name} ({formattedSelectedDate})
-                          </div>
-                        ) : (
-                          assignedMembers.map((member) => {
-                            const activeDutyRole = getMemberDutyRoleForSelectedDate(member.id);
-
-                            return (
-                              <div
-                                key={member.id}
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, member.id)}
-                                className={`p-3 rounded-xl border bg-white shadow-xs hover:shadow-md cursor-grab active:cursor-grabbing transition-all ${
-                                  isLeaveZone ? "border-amber-200" : "border-slate-200"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between gap-2 mb-1">
-                                  <div className="min-w-0 flex-1 flex items-center gap-2">
-                                    <p className="text-xs font-bold text-slate-900 truncate">{member.name}</p>
-                                    <StatusBadge status={isLeaveZone ? "LEAVE" : member.status} />
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    title="Remove from schedule"
-                                    onClick={() => handleRemoveFromShift(member.id, member.name, shift.name)}
-                                    className="text-slate-400 hover:text-red-500 text-xs font-bold p-1 rounded-md hover:bg-red-50 transition-colors"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-
-                                <p className="text-[10px] text-slate-500 truncate mb-2">{member.domain}</p>
-
-                                {/* SHIFT DUTY ROLE SELECTOR (PIC, TECHNICAL ADMIN, SUPPORT - DEFAULT SUPPORT) */}
-                                {!isLeaveZone && (
-                                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                                    <span className="text-[10px] font-bold text-slate-600">Shift Duty Role:</span>
-                                    <select
-                                      value={activeDutyRole}
-                                      onChange={(e) => handleChangeDutyRole(member.id, e.target.value as ShiftDutyRole, member.name)}
-                                      className="px-2 py-1 rounded-lg border border-slate-300 text-[10px] font-extrabold text-slate-800 bg-slate-50 hover:bg-slate-100 cursor-pointer focus:ring-1 focus:ring-blue-500"
-                                    >
-                                      <option value="SUPPORT">👤 Support (Default)</option>
-                                      <option value="PIC">⭐ PIC (Person In Charge)</option>
-                                      <option value="TECHNICAL_ADMIN">🛠️ Technical Admin</option>
-                                    </select>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            /* TABLE VIEW FOR LEADERSHIP */
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-5 border-b border-slate-200 flex items-center justify-between">
-                <div>
-                  <h2 className="font-bold text-slate-900 text-base">Full Shift, Duty Role & Leave Roster ({formattedSelectedDate})</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {isAmsHead ? "Viewing all shift schedules and shift duty designations across all corporate domains" : `Viewing shift schedules for ${userDomain}`}
-                  </p>
-                </div>
-                <span className="text-xs font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-full border border-slate-200">
-                  {scopedMembers.length} Active Records
-                </span>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-600">
-                  <thead className="bg-slate-50 text-slate-700 text-xs uppercase font-semibold border-b border-slate-200">
-                    <tr>
-                      <th className="py-3.5 px-4">Engineer</th>
-                      <th className="py-3.5 px-4">Domain</th>
-                      <th className="py-3.5 px-4">Schedule Category</th>
-                      <th className="py-3.5 px-4">Shift Duty Designation</th>
-                      <th className="py-3.5 px-4">Clock-In Time</th>
-                      <th className="py-3.5 px-4">Duty / Leave Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {scopedMembers.map((eng) => {
-                      const shiftId = getMemberShiftForSelectedDate(eng.id);
-                      const shift = SHIFT_OPTIONS.find((s) => s.id === shiftId);
-                      const isLeave = shiftId === "st-5";
-                      const dutyRole = getMemberDutyRoleForSelectedDate(eng.id);
-
-                      return (
-                        <tr key={eng.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="py-3.5 px-4 font-semibold text-slate-900">{eng.name}</td>
-                          <td className="py-3.5 px-4 text-xs font-medium text-slate-700">{eng.domain}</td>
-                          <td className={`py-3.5 px-4 font-bold text-xs ${isLeave ? "text-amber-700" : "text-blue-600"}`}>
-                            {shift ? `${isLeave ? "🌴 " : ""}${shift.name} (${shift.time})` : "Unassigned"}
-                          </td>
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            {shiftId && !isLeave ? (
-                              <div className="flex items-center gap-2">
-                                <DutyRoleBadge role={dutyRole} />
-                                <select
-                                  value={dutyRole}
-                                  onChange={(e) => handleChangeDutyRole(eng.id, e.target.value as ShiftDutyRole, eng.name)}
-                                  className="px-2 py-0.5 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-700 bg-slate-50 cursor-pointer"
-                                >
-                                  <option value="SUPPORT">Support (Default)</option>
-                                  <option value="PIC">⭐ PIC</option>
-                                  <option value="TECHNICAL_ADMIN">🛠️ Tech Admin</option>
-                                </select>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-slate-400">—</span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 text-xs font-mono font-semibold text-slate-900">
-                            {isLeave ? "—" : eng.actual_start || "—"}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <StatusBadge status={isLeave ? "LEAVE" : eng.status} />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
