@@ -211,8 +211,8 @@ export default function ReportsPage() {
   if (!canAccessReports) {
     return (
       <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-lg mx-auto mt-12">
-        <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-3 text-xl font-bold">
-          🔒
+        <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-3 text-sm font-bold uppercase">
+          SEC
         </div>
         <h2 className="text-lg font-bold text-slate-900">Access Restricted</h2>
         <p className="text-sm text-slate-500 mt-1">
@@ -239,7 +239,6 @@ export default function ReportsPage() {
             disabled={downloading === "csv"}
             className="btn btn-primary shadow-sm flex items-center gap-2"
           >
-            <span>📥</span>
             <span>{downloading === "csv" ? "Generating CSV..." : `Download ${frequency.toUpperCase()} CSV`}</span>
           </button>
           <button
@@ -247,7 +246,6 @@ export default function ReportsPage() {
             disabled={downloading === "pdf"}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-medium text-sm rounded-xl transition-all shadow-sm flex items-center gap-2"
           >
-            <span>📄</span>
             <span>Executive PDF</span>
           </button>
         </div>

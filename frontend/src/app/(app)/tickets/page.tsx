@@ -415,7 +415,7 @@ export default function TicketsPage() {
       ];
 
       setTickets((prev) => [...mockSlackTickets, ...prev]);
-      setSuccessMsg(`✓ Slack API Sync Complete! Ingested activities linked strictly to corporate account 📧 ${userEmail} (${slackConfig.channel_name}).`);
+      setSuccessMsg(`Slack API Sync Complete! Ingested activities linked strictly to corporate account ${userEmail} (${slackConfig.channel_name}).`);
       setSlackSyncLoading(false);
       setShowSlackSync(false);
     }, 1200);
@@ -427,7 +427,7 @@ export default function TicketsPage() {
     if (!handoverTicket) return;
 
     if (selectedShiftTarget === "PAST") {
-      setError("🚫 Cannot handover tickets to earlier/past shifts! Handover is restricted to current or upcoming shifts only.");
+      setError("Cannot handover tickets to earlier/past shifts! Handover is restricted to current or upcoming shifts only.");
       return;
     }
 
@@ -448,7 +448,7 @@ export default function TicketsPage() {
       )
     );
 
-    setSuccessMsg(`✓ Successfully handed over ticket ${handoverTicket.ticket_number || handoverTicket.id.slice(0, 8)} to ${targetName} (${selectedTargetEmail}) for ${selectedShiftTarget === "CURRENT" ? "Current Shift" : "Next Shift"}!`);
+    setSuccessMsg(`Successfully handed over ticket ${handoverTicket.ticket_number || handoverTicket.id.slice(0, 8)} to ${targetName} (${selectedTargetEmail}) for ${selectedShiftTarget === "CURRENT" ? "Current Shift" : "Next Shift"}!`);
     setHandoverTicket(null);
   };
 
@@ -482,20 +482,20 @@ export default function TicketsPage() {
             onClick={() => { setShowSlackSync(true); setFormattedReport(null); }}
             className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800 text-sm font-bold shadow-xs transition-all flex items-center gap-2"
           >
-            <span>💬</span> Sync from Slack
+            <span>Sync from Slack</span>
           </button>
 
           <button
             onClick={() => setShowSlaPolicy(!showSlaPolicy)}
             className="btn btn-outline flex items-center gap-2"
           >
-            <span>📜</span> {showSlaPolicy ? "Hide SLA Policy" : "View SLA Policy"}
+            <span>{showSlaPolicy ? "Hide SLA Policy" : "View SLA Policy"}</span>
           </button>
           <button
             onClick={() => setShowCreate(!showCreate)}
             className="btn btn-primary shadow-sm flex items-center gap-2"
           >
-            <span>➕</span> Log Incident
+            <span>Log Incident</span>
           </button>
         </div>
       </div>

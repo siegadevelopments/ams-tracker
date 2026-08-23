@@ -255,7 +255,7 @@ export default function TeamPage() {
               onClick={() => { setShowCreateLead(!showCreateLead); setCreateError(""); setCreateSuccess(""); }}
               className="btn btn-outline shadow-sm flex items-center gap-2"
             >
-              <span>👑</span> + Create Team Lead
+              <span>+ Assign Team Lead</span>
             </button>
           )}
         </div>
@@ -264,7 +264,6 @@ export default function TeamPage() {
       {createSuccess && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium space-y-2 shadow-sm">
           <div className="flex items-center gap-2 font-bold">
-            <span>✉️</span>
             <span>{createSuccess}</span>
           </div>
           {invitedLinkInfo && (
@@ -282,7 +281,6 @@ export default function TeamPage() {
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-100 relative">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="text-xl">✏️</span>
                 <h3 className="font-bold text-slate-900 text-base">Edit Team Member Details & Position</h3>
               </div>
               <button

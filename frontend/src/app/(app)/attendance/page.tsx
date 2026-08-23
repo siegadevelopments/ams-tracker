@@ -277,21 +277,21 @@ function StatusBadge({ status }: { status: string }) {
 function DutyRoleBadge({ role }: { role: ShiftDutyRole }) {
   if (role === "PIC") {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-black text-purple-800 bg-purple-100 border border-purple-300 px-2 py-0.5 rounded-full shadow-xs">
-        <span>⭐</span> PIC
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-800 bg-purple-100 border border-purple-300 px-2 py-0.5 rounded-full shadow-xs">
+        <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span> PIC
       </span>
     );
   }
   if (role === "TECHNICAL_ADMIN") {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-800 bg-sky-100 border border-sky-300 px-2 py-0.5 rounded-full">
-        <span>🛠️</span> Tech Admin
+        <span className="w-1.5 h-1.5 rounded-full bg-sky-600"></span> Tech Admin
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
-      <span>👤</span> Support
+      <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Support
     </span>
   );
 }
@@ -300,7 +300,7 @@ function PunctualityRemark({ lateMinutes, overtimeMinutes, isLeave }: { lateMinu
   if (isLeave) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-        <span>🌴</span> Approved Leave
+        Approved Leave
       </span>
     );
   }
@@ -308,7 +308,7 @@ function PunctualityRemark({ lateMinutes, overtimeMinutes, isLeave }: { lateMinu
   if (lateMinutes === 0 && (!overtimeMinutes || overtimeMinutes === 0)) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-        <span>✓</span> On Time (0m delay)
+        On Time (0m delay)
       </span>
     );
   }
@@ -325,7 +325,7 @@ function PunctualityRemark({ lateMinutes, overtimeMinutes, isLeave }: { lateMinu
 
     return (
       <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-        <span>⚠️</span> Late by {timeText}
+        Late by {timeText}
       </span>
     );
   }
@@ -333,14 +333,14 @@ function PunctualityRemark({ lateMinutes, overtimeMinutes, isLeave }: { lateMinu
   if (overtimeMinutes && overtimeMinutes > 0) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-0.5 rounded-full">
-        <span>➕</span> Overtime: {overtimeMinutes}m
+        Overtime: {overtimeMinutes}m
       </span>
     );
   }
 
   return (
     <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-      <span>✓</span> On Time
+      On Time
     </span>
   );
 }
@@ -541,7 +541,7 @@ export default function AttendancePage() {
                   viewMode === "dragdrop" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500"
                 }`}
               >
-                🖱️ Drag & Drop Board
+                Drag & Drop Board
               </button>
               <button
                 type="button"
@@ -550,7 +550,7 @@ export default function AttendancePage() {
                   viewMode === "table" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500"
                 }`}
               >
-                📋 Roster Table View
+                Roster Table View
               </button>
             </div>
           </div>
@@ -558,19 +558,21 @@ export default function AttendancePage() {
       </div>
 
       {isLeadership && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-blue-900/90 text-white p-4 rounded-2xl shadow-md border border-blue-800 gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-slate-900 text-white p-4 rounded-2xl shadow-md border border-slate-800 gap-3">
           <div className="flex items-center gap-3">
-            <span className="text-xl">📅</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
+              CAL
+            </div>
             <div>
-              <p className="text-xs font-semibold text-blue-200 uppercase tracking-wider">Active Scheduling Date</p>
-              <h2 className="text-base font-extrabold text-white">{formattedSelectedDate}</h2>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Scheduling Date</p>
+              <h2 className="text-base font-bold text-white">{formattedSelectedDate}</h2>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold bg-purple-500/30 border border-purple-400/40 text-purple-200 px-2.5 py-1 rounded-full">
-              Duty Roles: ⭐ PIC | 🛠️ Tech Admin | 👤 Support
+            <span className="text-[11px] font-bold bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-1 rounded-full">
+              Duty Roles: PIC | Tech Admin | Support
             </span>
-            <span className="text-[11px] font-bold bg-blue-500/30 border border-blue-400/40 text-blue-200 px-2.5 py-1 rounded-full">
+            <span className="text-[11px] font-bold bg-blue-600 text-white px-2.5 py-1 rounded-full">
               {selectedDate === TODAY_DATE_STR ? "TODAY" : "SELECTED DATE"}
             </span>
           </div>

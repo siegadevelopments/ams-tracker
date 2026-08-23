@@ -266,21 +266,21 @@ export default function MyShiftPage() {
                   disabled={actionLoading}
                   className="btn btn-secondary flex-1"
                 >
-                  ☕ Start Rest Break
+                  Start Rest Break
                 </button>
                 <button
                   onClick={handleEndBreak}
                   disabled={actionLoading}
                   className="btn btn-outline flex-1"
                 >
-                  ↩ End Break
+                  End Break
                 </button>
               </div>
 
               {/* Quick Logger */}
               <div className="border-t border-slate-100 pt-6">
                 <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                  <span>📝</span> Quick Shift Activity Logger
+                  Quick Shift Activity Logger
                 </h3>
                 <form onSubmit={handleLogActivity} className="space-y-3">
                   <div className="flex flex-col sm:flex-row gap-3">

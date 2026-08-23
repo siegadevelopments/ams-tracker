@@ -191,14 +191,12 @@ export default function DashboardPage() {
           </p>
         </div>
         <Link href="/my-shift" className="btn btn-primary shadow-sm flex items-center gap-2 self-start sm:self-auto">
-          <span>⏱️</span>
           <span>Go to My Shift Workspace</span>
         </Link>
       </div>
 
       {successMsg && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium flex items-center gap-2 shadow-sm">
-          <span>✓</span>
           <span>{successMsg}</span>
         </div>
       )}
@@ -210,12 +208,12 @@ export default function DashboardPage() {
       )}
 
       {/* SECTION 1: USER'S PERSONAL SHIFT SCHEDULE & QUICK ACTIONS */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-2xl shadow-xl p-6 text-white border border-blue-800/50">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 rounded-2xl shadow-xl p-6 text-white border border-slate-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-extrabold uppercase tracking-wider">
-                📅 Today's Assigned Schedule
+                Today's Assigned Schedule
               </span>
               <span className="text-xs font-semibold text-slate-300">
                 {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
@@ -231,13 +229,13 @@ export default function DashboardPage() {
 
             <div className="flex flex-wrap gap-4 text-xs text-slate-300 pt-1">
               <span className="flex items-center gap-1.5">
-                🏢 <strong>Unit:</strong> {userLotuss}
+                <strong>Unit:</strong> {userLotuss}
               </span>
               <span className="flex items-center gap-1.5">
-                🏛️ <strong>Domain:</strong> {userDomain}
+                <strong>Domain:</strong> {userDomain}
               </span>
               <span className="flex items-center gap-1.5">
-                👤 <strong>Position:</strong> {isAmsHead ? "AMS Head" : userRole.replace("_", " ")}
+                <strong>Position:</strong> {isAmsHead ? "AMS Head" : userRole.replace("_", " ")}
               </span>
             </div>
           </div>
@@ -247,8 +245,8 @@ export default function DashboardPage() {
               <p className="text-xs text-slate-300 font-medium">Shift Duty Status</p>
               <p className="text-sm font-black text-emerald-400">READY TO START</p>
             </div>
-            <Link href="/my-shift" className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all">
-              ▶ Start Shift
+            <Link href="/my-shift" className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition-all">
+              Start Shift
             </Link>
           </div>
         </div>
@@ -259,7 +257,6 @@ export default function DashboardPage() {
         <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xl">🤝</span>
               <h2 className="font-bold text-slate-900 text-base">Shift Takeover & Handover Tasks</h2>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -269,9 +266,9 @@ export default function DashboardPage() {
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs rounded-xl transition-all shadow-sm flex items-center gap-2 self-start sm:self-auto"
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-xl transition-all shadow-sm flex items-center gap-2 self-start sm:self-auto"
           >
-            <span>+</span> Add Handover Task for Next Shift
+            <span>+ Add Handover Task for Next Shift</span>
           </button>
         </div>
 
@@ -297,8 +294,8 @@ export default function DashboardPage() {
                 </p>
 
                 <div className="text-[11px] text-slate-500 space-y-1 mb-4">
-                  <p>👤 <strong>From:</strong> {task.from_user} ({task.from_shift})</p>
-                  <p>🏛️ <strong>Domain:</strong> {task.domain}</p>
+                  <p><strong>From:</strong> {task.from_user} ({task.from_shift})</p>
+                  <p><strong>Domain:</strong> {task.domain}</p>
                 </div>
               </div>
 
@@ -312,7 +309,7 @@ export default function DashboardPage() {
                       onClick={() => handleTakeover(task.id)}
                       className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors shadow-xs"
                     >
-                      🤝 Takeover Task
+                      Takeover Task
                     </button>
                   </>
                 ) : (
