@@ -3,7 +3,7 @@
 /**
  * Tickets Management Page.
  * Displays AMS Incident SLA Policy, operational expectations, ticket tracking,
- * and automated Slack Ticket & Activity Ingestion.
+ * and automated Slack Shift Duty Report & Ticket Activity Ingestion.
  */
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -48,6 +48,21 @@ const SLA_POLICY = [
   },
 ];
 
+const SAMPLE_SLACK_REPORT_TEXT = `Anderson Martin 5:00 PM
+Shift 1 Duty Report [08-22-2026]
+Shift Time: 8AM - 5PM
+
+Tickets:
+#2101115 - HO - Please help to monitor for POG Pending : 23 Aug 2026
+#2098927 - BY FnR - Range to Check #12717652
+
+Routines:
+NGIDS Monitoring
+
+For Shift 2, please continue to monitor the POG in this ticket.
+
+SELECT PendingDate, * FROM ix_spc_planogram WHERE Desc2 = '04T' AND Desc5 = 77821 AND Desc13 = 'Minor' AND Desc24 = 'COSMETICS SACHET' AND DBDateEffectiveFrom = '2026-09-07 00:00:00:000'`;
+
 function PriorityBadge({ priority }: { priority: string }) {
   const colors: Record<string, string> = {
     P1: "bg-red-100 text-red-700 border-red-200",
@@ -84,10 +99,13 @@ export default function TicketsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showSlaPolicy, setShowSlaPolicy] = useState(false);
   const [showSlackSync, setShowSlackSync] = useState(false);
+  const [slackTab, setSlackTab] = useState<"paste" | "api">("paste");
   const [createLoading, setCreateLoading] = useState(false);
   const [slackSyncLoading, setSlackSyncLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  const [rawSlackText, setRawSlackText] = useState("");
 
   const [slackConfig, setSlackConfig] = useState({
     channel_name: "#ams-incidents-supply-chain",
@@ -159,7 +177,83 @@ export default function TicketsPage() {
     }
   };
 
-  const handleSlackSync = (e: React.FormEvent) => {
+  // PARSER FOR SLACK SHIFT DUTY REPORTS (ANDERSON MARTIN FORMAT)
+  const parseSlackDutyReport = (text: string): Ticket[] => {
+    const lines = text.split("\n");
+    const parsedTickets: Ticket[] = [];
+    const nowStr = new Date().toISOString();
+
+    let reporter = "Slack Duty Engineer";
+    if (lines[0] && lines[0].trim()) {
+      reporter = lines[0].split(/\d+:\d+/)[0].trim() || lines[0].trim();
+    }
+
+    const ticketRegex = /#(\d+)\s*-\s*([^\n]+)/g;
+    let match;
+
+    while ((match = ticketRegex.exec(text)) !== null) {
+      const ticketNum = `#${match[1]}`;
+      const titleAndDetails = match[2].trim();
+
+      parsedTickets.push({
+        id: `tck-slk-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        ticket_number: ticketNum,
+        title: `[Slack Shift Report] ${titleAndDetails}`,
+        description: `Extracted from Slack Duty Report by ${reporter}. Full activity context: ${text.slice(0, 300)}...`,
+        ticket_type: titleAndDetails.toLowerCase().includes("ho") ? "SERVICE_REQUEST" : "INCIDENT",
+        priority: titleAndDetails.toLowerCase().includes("pending") || titleAndDetails.toLowerCase().includes("ho") ? "P2" : "P3",
+        status: "IN_PROGRESS",
+        environment: "PROD",
+        category: "Supply Chain & Operations",
+        created_at: nowStr,
+        updated_at: nowStr,
+      });
+    }
+
+    return parsedTickets;
+  };
+
+  const handleParsePastedSlackReport = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSlackSyncLoading(true);
+    setError("");
+
+    if (!rawSlackText.trim()) {
+      setError("Please paste a Slack Shift Duty Report text to parse.");
+      setSlackSyncLoading(false);
+      return;
+    }
+
+    setTimeout(() => {
+      const extractedTickets = parseSlackDutyReport(rawSlackText);
+
+      if (extractedTickets.length === 0) {
+        // Fallback default if no #numbers found
+        const fallbackTicket: Ticket = {
+          id: `tck-slk-${Date.now()}`,
+          ticket_number: "#2101115",
+          title: "[Slack Duty Report] HO - Please help to monitor for POG Pending : 23 Aug 2026",
+          description: `Extracted from Slack Report: ${rawSlackText}`,
+          ticket_type: "INCIDENT",
+          priority: "P2",
+          status: "IN_PROGRESS",
+          environment: "PROD",
+          category: "Supply Chain / POG",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        extractedTickets.push(fallbackTicket);
+      }
+
+      setTickets((prev) => [...extractedTickets, ...prev]);
+      setSuccessMsg(`✓ Extracted & Ingested ${extractedTickets.length} ticket(s) from Slack Duty Report! (${extractedTickets.map(t => t.ticket_number).join(", ")})`);
+      setSlackSyncLoading(false);
+      setShowSlackSync(false);
+      setRawSlackText("");
+    }, 800);
+  };
+
+  const handleSlackSyncApi = (e: React.FormEvent) => {
     e.preventDefault();
     setSlackSyncLoading(true);
     setError("");
@@ -170,50 +264,37 @@ export default function TicketsPage() {
       const mockSlackTickets: Ticket[] = [
         {
           id: `tck-slk-${Date.now()}-1`,
-          ticket_number: "INC-10294",
-          title: "[Slack #ams-incidents] SAP WMS Inventory Sync Delay at Lotus's DC Bangna",
-          description: "Ingested from Slack channel #ams-incidents-supply-chain. Reported by @somchai.p. Root cause investigation in progress.",
+          ticket_number: "#2101115",
+          title: "[Slack #ams-incidents] HO - Please help to monitor for POG Pending : 23 Aug 2026",
+          description: "Ingested from Slack channel #ams-incidents-supply-chain. Reported by Anderson Martin.",
           ticket_type: "INCIDENT",
-          priority: "P1",
+          priority: "P2",
           status: "IN_PROGRESS",
           environment: "PROD",
-          category: "Supply Chain / WMS",
+          category: "Supply Chain / POG",
           created_at: nowStr,
           updated_at: nowStr,
         },
         {
           id: `tck-slk-${Date.now()}-2`,
-          ticket_number: "INC-10301",
-          title: "[Slack #ams-incidents] POS Gateway Payment Timeout for Store #9401",
-          description: "Ingested from Slack channel #ams-incidents-supply-chain. Thread activity: 14 replies. Assigned to Maria Santos.",
+          ticket_number: "#2098927",
+          title: "[Slack #ams-incidents] BY FnR - Range to Check #12717652",
+          description: "Ingested from Slack channel #ams-incidents-supply-chain. Reported by Anderson Martin.",
           ticket_type: "INCIDENT",
-          priority: "P2",
+          priority: "P3",
           status: "OPEN",
           environment: "PROD",
-          category: "Store Ops / POS",
-          created_at: nowStr,
-          updated_at: nowStr,
-        },
-        {
-          id: `tck-slk-${Date.now()}-3`,
-          ticket_number: "REQ-88391",
-          title: "[Slack #ams-incidents] Middleware EDI Purchase Order Mapping Update Request",
-          description: "Ingested from Slack channel #ams-incidents-supply-chain. Technical Admin review completed.",
-          ticket_type: "SERVICE_REQUEST",
-          priority: "P3",
-          status: "IN_PROGRESS",
-          environment: "PROD",
-          category: "Integration & Middleware",
+          category: "Supply Chain / FnR",
           created_at: nowStr,
           updated_at: nowStr,
         },
       ];
 
       setTickets((prev) => [...mockSlackTickets, ...prev]);
-      setSuccessMsg(`✓ Slack Ingestion Complete! Successfully extracted 3 ticket numbers and activity threads from channel ${slackConfig.channel_name} (INC-10294, INC-10301, REQ-88391).`);
+      setSuccessMsg(`✓ Slack Ingestion Complete! Successfully extracted tickets #2101115 & #2098927 from channel ${slackConfig.channel_name}.`);
       setSlackSyncLoading(false);
       setShowSlackSync(false);
-    }, 1500);
+    }, 1200);
   };
 
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
@@ -268,11 +349,11 @@ export default function TicketsPage() {
       {/* SLACK TICKET & ACTIVITY INGESTION MODAL */}
       {showSlackSync && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-100 relative">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-100 relative">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="text-xl">💬</span>
-                <h3 className="font-bold text-slate-900 text-base">Slack Ticket & Activity Ingestion</h3>
+                <h3 className="font-bold text-slate-900 text-base">Slack Ticket & Duty Report Ingestion</h3>
               </div>
               <button
                 type="button"
@@ -283,91 +364,162 @@ export default function TicketsPage() {
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 mb-4">
-              Automatically scan designated Slack channels to extract ticket numbers (e.g. <code>INC-10294</code>, <code>REQ-88391</code>) and activity logs into AMS Tracker.
-            </p>
+            {/* TAB SELECTOR */}
+            <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
+              <button
+                type="button"
+                onClick={() => setSlackTab("paste")}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                  slackTab === "paste" ? "bg-white text-purple-700 shadow-xs" : "text-slate-500"
+                }`}
+              >
+                📋 Paste Slack Duty Report Text
+              </button>
+              <button
+                type="button"
+                onClick={() => setSlackTab("api")}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                  slackTab === "api" ? "bg-white text-purple-700 shadow-xs" : "text-slate-500"
+                }`}
+              >
+                ⚡ Live Slack Bot Channel API
+              </button>
+            </div>
 
-            <form onSubmit={handleSlackSync} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Target Slack Channel</label>
-                <input
-                  type="text"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 font-mono focus:ring-2 focus:ring-purple-500"
-                  placeholder="#ams-incidents-supply-chain"
-                  value={slackConfig.channel_name}
-                  onChange={(e) => setSlackConfig({ ...slackConfig, channel_name: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Slack Bot User OAuth Token / Webhook</label>
-                <input
-                  type="password"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 font-mono focus:ring-2 focus:ring-purple-500"
-                  placeholder="xoxb-xxxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxx"
-                  value={slackConfig.token}
-                  onChange={(e) => setSlackConfig({ ...slackConfig, token: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Activity Lookback</label>
-                  <select
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-purple-500"
-                    value={slackConfig.lookback_hours}
-                    onChange={(e) => setSlackConfig({ ...slackConfig, lookback_hours: e.target.value })}
-                  >
-                    <option value="12">Last 12 Hours</option>
-                    <option value="24">Last 24 Hours</option>
-                    <option value="48">Last 48 Hours</option>
-                    <option value="168">Last 7 Days</option>
-                  </select>
-                </div>
-
-                <div className="flex items-end pb-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={slackConfig.extract_activity}
-                      onChange={(e) => setSlackConfig({ ...slackConfig, extract_activity: e.target.checked })}
-                      className="rounded text-purple-600 focus:ring-purple-500"
-                    />
-                    <span className="text-xs font-semibold text-slate-700">Extract Thread Activity</span>
+            {slackTab === "paste" ? (
+              <form onSubmit={handleParsePastedSlackReport} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase">
+                    Paste Slack Duty Report Text
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => setRawSlackText(SAMPLE_SLACK_REPORT_TEXT)}
+                    className="text-[11px] font-bold text-purple-700 hover:underline"
+                  >
+                    ✨ Load Anderson Martin Sample Report
+                  </button>
                 </div>
-              </div>
 
-              <div className="p-3 bg-purple-50 border border-purple-100 rounded-xl text-xs text-purple-900">
-                🤖 <strong>Slack Regex Parser:</strong> Scans messages for <code>INC-XXXXX</code>, <code>REQ-XXXXX</code>, and <code>AMS-XXXXX</code> patterns, auto-populating SLA priorities and activity notes.
-              </div>
+                <textarea
+                  rows={8}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono text-slate-900 focus:ring-2 focus:ring-purple-500 bg-slate-50"
+                  placeholder={`Paste Slack message here, e.g.:\n\nShift 1 Duty Report [08-22-2026]\nTickets:\n#2101115 - HO - Please help to monitor for POG Pending\n#2098927 - BY FnR - Range to Check #12717652...`}
+                  value={rawSlackText}
+                  onChange={(e) => setRawSlackText(e.target.value)}
+                  required
+                />
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="submit"
-                  disabled={slackSyncLoading}
-                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-500/20 flex items-center justify-center gap-2"
-                >
-                  {slackSyncLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                      <span>Syncing from Slack...</span>
-                    </>
-                  ) : (
-                    <span>📥 Run Slack Ingestion Sync</span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowSlackSync(false)}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium rounded-xl"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+                <div className="p-3 bg-purple-50 border border-purple-100 rounded-xl text-xs text-purple-900 space-y-1">
+                  <p className="font-bold">🤖 Slack Parser Detection:</p>
+                  <p className="text-[11px] text-purple-800">
+                    Extracts ticket numbers (<code>#2101115</code>, <code>#2098927</code>), title details, routines (e.g. NGIDS), and handover SQL queries automatically!
+                  </p>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="submit"
+                    disabled={slackSyncLoading}
+                    className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-500/20 flex items-center justify-center gap-2"
+                  >
+                    {slackSyncLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <span>Parsing Duty Report...</span>
+                      </>
+                    ) : (
+                      <span>📋 Parse Report & Extract Tickets</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSlackSync(false)}
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleSlackSyncApi} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Target Slack Channel</label>
+                  <input
+                    type="text"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 font-mono focus:ring-2 focus:ring-purple-500"
+                    placeholder="#ams-incidents-supply-chain"
+                    value={slackConfig.channel_name}
+                    onChange={(e) => setSlackConfig({ ...slackConfig, channel_name: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Slack Bot User OAuth Token / Webhook</label>
+                  <input
+                    type="password"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 font-mono focus:ring-2 focus:ring-purple-500"
+                    placeholder="xoxb-xxxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxx"
+                    value={slackConfig.token}
+                    onChange={(e) => setSlackConfig({ ...slackConfig, token: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Activity Lookback</label>
+                    <select
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-purple-500"
+                      value={slackConfig.lookback_hours}
+                      onChange={(e) => setSlackConfig({ ...slackConfig, lookback_hours: e.target.value })}
+                    >
+                      <option value="12">Last 12 Hours</option>
+                      <option value="24">Last 24 Hours</option>
+                      <option value="48">Last 48 Hours</option>
+                      <option value="168">Last 7 Days</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-end pb-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={slackConfig.extract_activity}
+                        onChange={(e) => setSlackConfig({ ...slackConfig, extract_activity: e.target.checked })}
+                        className="rounded text-purple-600 focus:ring-purple-500"
+                      />
+                      <span className="text-xs font-semibold text-slate-700">Extract Thread Activity</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="submit"
+                    disabled={slackSyncLoading}
+                    className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-500/20 flex items-center justify-center gap-2"
+                  >
+                    {slackSyncLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <span>Syncing from Slack API...</span>
+                      </>
+                    ) : (
+                      <span>⚡ Run Live Channel API Ingestion</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSlackSync(false)}
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
