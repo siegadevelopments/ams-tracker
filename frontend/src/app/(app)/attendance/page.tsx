@@ -59,14 +59,14 @@ const generateGoogleSheetRosterSchedule = (dateStr: string): { schedules: Record
   const dayNumber = dateObj.getDate();
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-  // Team Leads: Mon-Fri Day Shift (st-1), Sat-Sun OFF
-  ["eng-101", "eng-118", "eng-104"].forEach((tlId) => {
-    schedules[tlId] = isWeekend ? null : "st-1";
-    roles[tlId] = "SUPPORT";
-  });
+  // ALL Team Leads (TLs): Mon-Fri Shift 1 (Day Shift 08:00 - 17:00), Sat-Sun OFF
+  const teamLeads = INITIAL_TEAM_MEMBERS.filter((m) => m.role === "TEAM_LEAD" || m.name.startsWith("TL "));
+  const engineers = INITIAL_TEAM_MEMBERS.filter((m) => m.role !== "TEAM_LEAD" && !m.name.startsWith("TL "));
 
-  // Engineers roster assignment with zero empty shift gaps & 24/7 coverage
-  const engineers = INITIAL_TEAM_MEMBERS.filter((m) => !["eng-101", "eng-118", "eng-104"].includes(m.id));
+  teamLeads.forEach((tl) => {
+    schedules[tl.id] = isWeekend ? null : "st-1";
+    roles[tl.id] = "SUPPORT";
+  });
 
   engineers.forEach((m, idx) => {
     // Specific leave days from sheet
