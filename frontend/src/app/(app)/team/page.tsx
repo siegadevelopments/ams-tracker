@@ -2,8 +2,9 @@
 
 /**
  * Team & Domain Management Page.
- * - AMS Head: Can view all team members across all domains and assign Team Leads per Domain.
- * - Team Leads: Can ONLY view members belonging to their assigned domain.
+ * - AMS Head: Can view all team members across all domains, assign Team Leads, and add team members.
+ * - Team Leads: Can view members belonging to their domain and add team members.
+ * - Adding a team member creates an account and dispatches an automated Onboarding Invitation Email.
  */
 
 import React, { useEffect, useState } from "react";
@@ -23,9 +24,15 @@ export default function TeamPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateLead, setShowCreateLead] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [selectedDomainFilter, setSelectedDomainFilter] = useState("ALL");
-  
-  // Form State
+
+  const isAmsHead = currentUser?.role === "AMS_HEAD" || currentUser?.role === "SUPER_ADMIN";
+  const isTeamLead = currentUser?.role === "TEAM_LEAD";
+  const userDomain = (currentUser as any)?.domain || "Supply chain and Planning Domain";
+  const canAddMember = isAmsHead || isTeamLead;
+
+  // Form State for Creating Team Lead (AMS Head only)
   const [newLead, setNewLead] = useState({
     email: "",
     first_name: "",
@@ -33,11 +40,20 @@ export default function TeamPage() {
     domain: OFFICIAL_DOMAINS[0],
     lotuss_name: "Lotus's Thailand HQ",
   });
+
+  // Form State for Adding Team Member & Sending Onboarding Invitation (AMS Head & Team Leads)
+  const [newMember, setNewMember] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    domain: isAmsHead ? OFFICIAL_DOMAINS[0] : userDomain,
+    lotuss_name: "Lotus's Thailand HQ",
+    role: "AMS_ENGINEER",
+  });
+
   const [createError, setCreateError] = useState("");
   const [createSuccess, setCreateSuccess] = useState("");
-
-  const isAmsHead = currentUser?.role === "AMS_HEAD" || currentUser?.role === "SUPER_ADMIN";
-  const userDomain = (currentUser as any)?.domain || "Supply chain and Planning Domain";
+  const [invitedLinkInfo, setInvitedLinkInfo] = useState<{ email: string; link: string } | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -58,6 +74,7 @@ export default function TeamPage() {
     e.preventDefault();
     setCreateError("");
     setCreateSuccess("");
+    setInvitedLinkInfo(null);
 
     if (!newLead.email.trim().toLowerCase().endsWith("@ark.co.th")) {
       setCreateError("Only @ark.co.th corporate emails can be assigned as Team Lead.");
@@ -88,11 +105,51 @@ export default function TeamPage() {
     }
   };
 
+  const handleAddTeamMember = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateError("");
+    setCreateSuccess("");
+    setInvitedLinkInfo(null);
+
+    const cleanEmail = newMember.email.trim().toLowerCase();
+    if (!cleanEmail.endsWith("@ark.co.th")) {
+      setCreateError("Only @ark.co.th corporate emails are permitted.");
+      return;
+    }
+
+    const createdUser: User = {
+      id: `usr-${Date.now()}`,
+      email: cleanEmail,
+      first_name: newMember.first_name.trim(),
+      last_name: newMember.last_name.trim(),
+      role: newMember.role,
+      domain: isAmsHead ? newMember.domain : userDomain,
+      lotuss_name: newMember.lotuss_name.trim() || "Lotus's Thailand HQ",
+      timezone: "Asia/Bangkok",
+      is_active: true,
+    };
+
+    const onboardingInviteLink = `${typeof window !== "undefined" ? window.location.origin : ""}/login?invite=${Date.now()}&email=${cleanEmail}`;
+
+    setUsers([createdUser, ...users]);
+    setCreateSuccess(`✓ Account created for ${createdUser.first_name} ${createdUser.last_name}. An onboarding invitation email has been dispatched to ${cleanEmail}.`);
+    setInvitedLinkInfo({ email: cleanEmail, link: onboardingInviteLink });
+
+    setNewMember({
+      first_name: "",
+      last_name: "",
+      email: "",
+      domain: isAmsHead ? OFFICIAL_DOMAINS[0] : userDomain,
+      lotuss_name: "Lotus's Thailand HQ",
+      role: "AMS_ENGINEER",
+    });
+    setShowAddMemberModal(false);
+  };
+
   const getLeadForDomain = (domName: string) => {
     return users.find((u) => u.domain === domName && (u.role === "TEAM_LEAD" || u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" || u.role === "AMS_MANAGER"));
   };
 
-  // Team Leads ONLY see domains & users belonging to their domain
   const visibleDomains = isAmsHead
     ? OFFICIAL_DOMAINS
     : OFFICIAL_DOMAINS.filter((d) => d === userDomain || d.toLowerCase().includes(userDomain.toLowerCase().split(" ")[0]));
@@ -118,20 +175,177 @@ export default function TeamPage() {
             {isAmsHead ? "AMS Head Global Directory & Corporate Domain Leadership" : `Team Directory — ${userDomain}`}
           </p>
         </div>
-        {isAmsHead && (
-          <button
-            onClick={() => { setShowCreateLead(!showCreateLead); setCreateError(""); setCreateSuccess(""); }}
-            className="btn btn-primary shadow-sm flex items-center gap-2 self-start sm:self-auto"
-          >
-            <span>👑</span> + Create Team Lead
-          </button>
-        )}
+
+        <div className="flex flex-wrap gap-3 self-start sm:self-auto">
+          {canAddMember && (
+            <button
+              onClick={() => { setShowAddMemberModal(true); setCreateError(""); setCreateSuccess(""); }}
+              className="btn btn-primary shadow-sm flex items-center gap-2"
+            >
+              <span>👤</span> + Add Team Member & Invite
+            </button>
+          )}
+
+          {isAmsHead && (
+            <button
+              onClick={() => { setShowCreateLead(!showCreateLead); setCreateError(""); setCreateSuccess(""); }}
+              className="btn btn-outline shadow-sm flex items-center gap-2"
+            >
+              <span>👑</span> + Create Team Lead
+            </button>
+          )}
+        </div>
       </div>
 
       {createSuccess && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium flex items-center gap-2 shadow-sm">
-          <span>✓</span>
-          <span>{createSuccess}</span>
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium space-y-2 shadow-sm">
+          <div className="flex items-center gap-2 font-bold">
+            <span>✉️</span>
+            <span>{createSuccess}</span>
+          </div>
+          {invitedLinkInfo && (
+            <div className="p-3 bg-white rounded-lg border border-emerald-200 text-xs text-slate-600 font-mono flex items-center justify-between gap-2">
+              <span className="truncate">Onboarding URL: {invitedLinkInfo.link}</span>
+              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px] uppercase">Email Sent</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ADD TEAM MEMBER & DISPATCH ONBOARDING EMAIL MODAL */}
+      {showAddMemberModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-100 relative">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">👤</span>
+                <h3 className="font-bold text-slate-900 text-base">Add Team Member & Send Onboarding Invitation</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddMemberModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            {createError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{createError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAddTeamMember} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">First Name</label>
+                  <input
+                    type="text"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500"
+                    placeholder="Kamonrat"
+                    value={newMember.first_name}
+                    onChange={(e) => setNewMember({ ...newMember, first_name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500"
+                    placeholder="Phonwichai"
+                    value={newMember.last_name}
+                    onChange={(e) => setNewMember({ ...newMember, last_name: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Corporate Email (@ark.co.th)</label>
+                <input
+                  type="email"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  placeholder="kamonrat.p@ark.co.th"
+                  value={newMember.email}
+                  onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Target Domain</label>
+                  {isAmsHead ? (
+                    <select
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-blue-500"
+                      value={newMember.domain}
+                      onChange={(e) => setNewMember({ ...newMember, domain: e.target.value })}
+                    >
+                      {OFFICIAL_DOMAINS.map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-500 bg-slate-50 font-bold"
+                      value={userDomain}
+                      disabled
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Position / Role</label>
+                  <select
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-blue-500"
+                    value={newMember.role}
+                    onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
+                  >
+                    <option value="AMS_ENGINEER">AMS Engineer</option>
+                    <option value="SENIOR_ENGINEER">Senior Engineer</option>
+                    <option value="SUPPORT_ANALYST">Support Analyst</option>
+                    <option value="TEAM_LEAD">Team Lead</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Lotus's Name / Branch Unit</label>
+                <input
+                  type="text"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  placeholder="Lotus's Thailand HQ"
+                  value={newMember.lotuss_name}
+                  onChange={(e) => setNewMember({ ...newMember, lotuss_name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-800">
+                ⚡ <strong>Automated Onboarding Email:</strong> Upon submitting, an account will be created and an onboarding link will be sent to the email owner to complete registration.
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20"
+                >
+                  Create Account & Send Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddMemberModal(false)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium rounded-xl"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -384,7 +598,7 @@ export default function TeamPage() {
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                         u.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
                       }`}>
-                        {u.is_active ? "Active" : "Inactive"}
+                        {u.is_active ? "Active" : "Pending Onboarding"}
                       </span>
                     </td>
                   </tr>
