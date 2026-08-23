@@ -94,12 +94,7 @@ interface CorporateEngineer {
 }
 
 const CORPORATE_ENGINEERS: CorporateEngineer[] = [
-  { name: "Anderson Martin", email: "anderson.martin@ark.co.th", role: "AMS Engineer", domain: "Supply chain and Planning Domain", dutyRole: "PIC", shiftType: "CURRENT" },
-  { name: "Kamonrat Phonwichai", email: "kamonrat.p@ark.co.th", role: "Senior Engineer", domain: "Store Ops, Sales", dutyRole: "TECHNICAL_ADMIN", shiftType: "CURRENT" },
-  { name: "Maria Santos", email: "maria.santos@ark.co.th", role: "Team Lead", domain: "Supply chain and Planning Domain", dutyRole: "PIC", shiftType: "CURRENT" },
-  { name: "Patarapol Vongsawat", email: "patarapol.v@ark.co.th", role: "Support Analyst", domain: "Finance", dutyRole: "SUPPORT", shiftType: "NEXT" },
-  { name: "Chayanon Boonmee", email: "chayanon.b@ark.co.th", role: "AMS Engineer", domain: "Integration and Middleware Domain", dutyRole: "SUPPORT", shiftType: "NEXT" },
-  { name: "Thanakorn Srivastav", email: "thanakorn.s@ark.co.th", role: "AMS Engineer", domain: "Buy and Merchandise Domain", dutyRole: "SUPPORT", shiftType: "NEXT" },
+  { name: "Ernest Siega", email: "ernest.siega@ark.co.th", role: "AMS Head", domain: "Supply chain and Planning Domain", dutyRole: "PIC", shiftType: "CURRENT" },
 ];
 
 function PriorityBadge({ priority }: { priority: string }) {
