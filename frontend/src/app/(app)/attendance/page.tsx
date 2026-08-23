@@ -139,17 +139,17 @@ const TODAY_DATE_STR = new Date().toISOString().split("T")[0];
 
 const INITIAL_DATE_SCHEDULES: Record<string, Record<string, string | null>> = {
   [TODAY_DATE_STR]: {
-    "eng-101": "st-1",
-    "eng-102": "st-1",
-    "eng-103": "st-1",
-    "eng-104": "st-1",
-    "eng-105": "st-1",
-    "eng-106": "st-1",
-    "eng-107": "st-1",
-    "eng-108": "st-1",
-    "eng-109": "st-1",
-    "eng-110": "st-1",
-    "eng-111": "st-1",
+    "eng-101": null,
+    "eng-102": null,
+    "eng-103": null,
+    "eng-104": null,
+    "eng-105": null,
+    "eng-106": null,
+    "eng-107": null,
+    "eng-108": null,
+    "eng-109": null,
+    "eng-110": null,
+    "eng-111": null,
   },
 };
 
