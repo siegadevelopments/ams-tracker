@@ -34,7 +34,13 @@ export default function MyShiftPage() {
       const attResult = await api.getCurrentAttendance();
       if (attResult.data) {
         setAttendance(attResult.data);
-        setShiftStatus(attResult.data.actual_end_utc ? "ended" : "active");
+        if (attResult.data.actual_start_utc && !attResult.data.actual_end_utc) {
+          setShiftStatus("active");
+        } else if (attResult.data.actual_end_utc) {
+          setShiftStatus("ended");
+        } else {
+          setShiftStatus("no_shift");
+        }
         loadActivities();
       } else {
         setAttendance(null);
