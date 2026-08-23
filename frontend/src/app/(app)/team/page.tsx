@@ -4,8 +4,8 @@
  * Team & Domain Management Page.
  * - AMS Head: Can view all team members, assign Team Leads, add new members, and edit team member position & details.
  * - Team Leads: Can view members belonging to their domain and add team members.
- * - Adding a team member defaults Lotus's branch unit to "LTT" (no input required on add).
- * - AMS Head can edit/change the branch unit in the edit modal.
+ * - When a domain is selected during member creation, the member is automatically linked under the domain's Team Lead!
+ * - Lotus's branch unit defaults to "LTT".
  */
 
 import React, { useEffect, useState } from "react";
@@ -90,6 +90,10 @@ export default function TeamPage() {
     }
   };
 
+  const getLeadForDomain = (domName: string) => {
+    return users.find((u) => u.domain === domName && (u.role === "TEAM_LEAD" || u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" || u.role === "AMS_MANAGER"));
+  };
+
   const handleOpenEditModal = (targetUser: User) => {
     setEditingUser(targetUser);
     setEditForm({
@@ -107,6 +111,8 @@ export default function TeamPage() {
     e.preventDefault();
     if (!editingUser) return;
 
+    const domainLead = getLeadForDomain(editForm.domain);
+
     setUsers((prev) =>
       prev.map((u) =>
         u.id === editingUser.id
@@ -118,12 +124,13 @@ export default function TeamPage() {
               domain: editForm.domain,
               lotuss_name: editForm.lotuss_name.trim() || "LTT",
               is_active: editForm.is_active,
+              team_id: domainLead ? domainLead.id : u.team_id,
             }
           : u
       )
     );
 
-    setCreateSuccess(`✓ Successfully updated ${editForm.first_name} ${editForm.last_name}'s position & details.`);
+    setCreateSuccess(`✓ Successfully updated ${editForm.first_name} ${editForm.last_name}'s position & details (Assigned under Team Lead ${domainLead ? `${domainLead.first_name} ${domainLead.last_name}` : "Pending Lead"}).`);
     setEditingUser(null);
   };
 
@@ -174,22 +181,26 @@ export default function TeamPage() {
       return;
     }
 
+    const targetDomain = isAmsHead ? newMember.domain : userDomain;
+    const domainLead = getLeadForDomain(targetDomain);
+
     const createdUser: User = {
       id: `usr-${Date.now()}`,
       email: cleanEmail,
       first_name: newMember.first_name.trim(),
       last_name: newMember.last_name.trim(),
       role: newMember.role,
-      domain: isAmsHead ? newMember.domain : userDomain,
+      domain: targetDomain,
       lotuss_name: "LTT", // Defaulted automatically to LTT
       timezone: "Asia/Bangkok",
       is_active: true,
+      team_id: domainLead ? domainLead.id : null,
     };
 
     const onboardingInviteLink = `${typeof window !== "undefined" ? window.location.origin : ""}/login?invite=${Date.now()}&email=${cleanEmail}`;
 
     setUsers([createdUser, ...users]);
-    setCreateSuccess(`✓ Account created for ${createdUser.first_name} ${createdUser.last_name}. An onboarding invitation email has been dispatched to ${cleanEmail}.`);
+    setCreateSuccess(`✓ Account created for ${createdUser.first_name} ${createdUser.last_name} and automatically assigned under Team Lead ${domainLead ? `${domainLead.first_name} ${domainLead.last_name}` : "Pending Lead"} (${targetDomain}).`);
     setInvitedLinkInfo({ email: cleanEmail, link: onboardingInviteLink });
 
     setNewMember({
@@ -201,10 +212,6 @@ export default function TeamPage() {
       role: "AMS_ENGINEER",
     });
     setShowAddMemberModal(false);
-  };
-
-  const getLeadForDomain = (domName: string) => {
-    return users.find((u) => u.domain === domName && (u.role === "TEAM_LEAD" || u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" || u.role === "AMS_MANAGER"));
   };
 
   const visibleDomains = isAmsHead
@@ -487,6 +494,24 @@ export default function TeamPage() {
                 </div>
               </div>
 
+              {/* AUTOMATIC TEAM LEAD ASSIGNMENT INFORMATIONAL BANNER */}
+              {(() => {
+                const targetDom = isAmsHead ? newMember.domain : userDomain;
+                const lead = getLeadForDomain(targetDom);
+                return (
+                  <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-900 flex items-center gap-2">
+                    <span className="text-sm shrink-0">👑</span>
+                    <div>
+                      <p className="font-bold">Automatic Team Lead Linkage:</p>
+                      <p className="text-[11px] text-purple-800 mt-0.5">
+                        Member will be assigned under Team Lead{" "}
+                        <strong className="underline font-extrabold">{lead ? `${lead.first_name} ${lead.last_name}` : "Pending Team Lead"}</strong> for {targetDom}.
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-800">
                 ⚡ <strong>Branch Unit Default:</strong> Lotus's branch unit defaults to <strong>LTT</strong> automatically. AMS Head can change the unit at any time.
               </div>
@@ -639,7 +664,7 @@ export default function TeamPage() {
                       Corporate Domain
                     </span>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${lead ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                      {lead ? "Assigned" : "Pending Lead"}
+                      {lead ? "Assigned Lead" : "Pending Lead"}
                     </span>
                   </div>
                   <h3 className="font-bold text-slate-900 text-base leading-snug mb-3">{domName}</h3>
@@ -734,6 +759,7 @@ export default function TeamPage() {
                   <th className="py-3 px-4">Name</th>
                   <th className="py-3 px-4">Email</th>
                   <th className="py-3 px-4">Domain</th>
+                  <th className="py-3 px-4">Assigned Team Lead</th>
                   <th className="py-3 px-4">Role / Position</th>
                   <th className="py-3 px-4">Lotus's Unit</th>
                   <th className="py-3 px-4">Status</th>
@@ -741,41 +767,53 @@ export default function TeamPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 px-4 font-semibold text-slate-900">
-                      {u.first_name} {u.last_name}
-                    </td>
-                    <td className="py-3 px-4">{u.email}</td>
-                    <td className="py-3 px-4 font-medium text-slate-700">{u.domain || "—"}</td>
-                    <td className="py-3 px-4">
-                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                        u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" ? "bg-purple-100 text-purple-700 border border-purple-200" :
-                        u.role === "TEAM_LEAD" ? "bg-blue-100 text-blue-700 border border-blue-200" : "bg-slate-100 text-slate-700 border border-slate-200"
-                      }`}>
-                        {u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" ? "AMS Head" : u.role.replace("_", " ")}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-xs font-bold text-slate-800">{u.lotuss_name || "LTT"}</td>
-                    <td className="py-3 px-4">
-                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                        u.is_active ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"
-                      }`}>
-                        {u.is_active ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    {isAmsHead && (
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => handleOpenEditModal(u)}
-                          className="px-2.5 py-1 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
-                        >
-                          ✏️ Edit Details
-                        </button>
+                {filteredUsers.map((u) => {
+                  const domLead = getLeadForDomain(u.domain || "");
+                  return (
+                    <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-3 px-4 font-semibold text-slate-900">
+                        {u.first_name} {u.last_name}
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td className="py-3 px-4">{u.email}</td>
+                      <td className="py-3 px-4 font-medium text-slate-700">{u.domain || "—"}</td>
+                      <td className="py-3 px-4 text-xs">
+                        {domLead ? (
+                          <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md text-[11px] font-bold">
+                            <span>👑</span> {domLead.first_name} {domLead.last_name}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 italic text-[11px]">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                          u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" ? "bg-purple-100 text-purple-700 border border-purple-200" :
+                          u.role === "TEAM_LEAD" ? "bg-blue-100 text-blue-700 border border-blue-200" : "bg-slate-100 text-slate-700 border border-slate-200"
+                        }`}>
+                          {u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" ? "AMS Head" : u.role.replace("_", " ")}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-xs font-bold text-slate-800">{u.lotuss_name || "LTT"}</td>
+                      <td className="py-3 px-4">
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                          u.is_active ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"
+                        }`}>
+                          {u.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      {isAmsHead && (
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => handleOpenEditModal(u)}
+                            className="px-2.5 py-1 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
+                          >
+                            ✏️ Edit Details
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
