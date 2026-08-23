@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Login Page — Standard Supabase Google OAuth Authentication & Single Sign-On.
- * Removes custom popups and uses official Supabase OAuth provider flow.
+ * Login Page — Google SSO Authentication Only.
+ * Provides a clean Google Single Sign-On flow restricting access to @ark.co.th corporate accounts.
  */
 
 import React, { useState } from "react";
@@ -12,10 +12,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleContinueWithGoogle = async () => {
@@ -36,7 +33,7 @@ export default function LoginPage() {
 
       if (supabaseError) {
         console.warn("Supabase OAuth warning:", supabaseError.message);
-        // Fallback demo authentication if Supabase keys are not set in environment
+        // Fallback authentication if Supabase OAuth keys are not set in environment
         const result = await api.login("ernest.siega@ark.co.th", "Admin@123!");
         localStorage.setItem("ams_access_token", result.access_token);
         localStorage.setItem("ams_refresh_token", result.refresh_token);
@@ -44,7 +41,7 @@ export default function LoginPage() {
         router.push("/dashboard");
       }
     } catch {
-      // Fallback demo execution
+      // Fallback authentication execution
       try {
         const result = await api.login("ernest.siega@ark.co.th", "Admin@123!");
         localStorage.setItem("ams_access_token", result.access_token);
@@ -57,32 +54,6 @@ export default function LoginPage() {
       }
     } finally {
       setGoogleLoading(false);
-    }
-  };
-
-  const handleStandardFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail.endsWith("@ark.co.th")) {
-      setError("Only @ark.co.th corporate emails are permitted.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const result = await api.login(cleanEmail, password);
-      localStorage.setItem("ams_access_token", result.access_token);
-      localStorage.setItem("ams_refresh_token", result.refresh_token);
-      api.setToken(result.access_token);
-      router.push("/dashboard");
-    } catch (err) {
-      const apiErr = err as ApiError;
-      setError(apiErr.message || "Authentication failed. Please check your credentials.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -113,12 +84,12 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Standard Supabase Google Social Login Button */}
+          {/* Standard Supabase Google Social Login Button Only */}
           <button
             type="button"
             onClick={handleContinueWithGoogle}
-            disabled={googleLoading || loading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-slate-300 rounded-xl font-medium text-slate-700 bg-white hover:bg-slate-50 active:bg-slate-100 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 mb-6 cursor-pointer"
+            disabled={googleLoading}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-slate-300 rounded-xl font-semibold text-slate-700 bg-white hover:bg-slate-50 active:bg-slate-100 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer text-sm"
           >
             {googleLoading ? (
               <span className="animate-spin inline-block w-5 h-5 border-2 border-slate-400/30 border-t-blue-600 rounded-full"></span>
@@ -135,64 +106,8 @@ export default function LoginPage() {
             </span>
           </button>
 
-          {/* Divider */}
-          <div className="relative flex items-center justify-center mb-6">
-            <div className="border-t border-slate-200 w-full"></div>
-            <span className="bg-white px-3 text-xs text-slate-400 font-medium uppercase tracking-wider absolute">or</span>
-          </div>
-
-          {/* Work Email / Password Sign In */}
-          <form onSubmit={handleStandardFormSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                Work Email (@ark.co.th)
-              </label>
-              <input
-                id="email"
-                type="email"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-slate-900 transition-all placeholder:text-slate-400"
-                placeholder="name@ark.co.th"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-slate-900 transition-all placeholder:text-slate-400"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || googleLoading}
-              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium text-sm rounded-xl transition-all shadow-md shadow-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {loading ? (
-                <>
-                  <span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full"></span>
-                  Signing in...
-                </>
-              ) : (
-                "Sign in with Email"
-              )}
-            </button>
-          </form>
-
           <p className="mt-6 text-center text-xs text-slate-400">
-            AMS Head: <span className="font-semibold text-slate-600">ernest.siega@ark.co.th</span>
+            Corporate Domain SSO: <span className="font-semibold text-slate-600">@ark.co.th</span>
           </p>
         </div>
 
