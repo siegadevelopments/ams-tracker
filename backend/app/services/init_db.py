@@ -43,25 +43,33 @@ async def init_db() -> None:
                     await session.flush()
                 roles_map[name] = role
 
-            # 2. Seed Default Admin User if missing
-            stmt = select(User).where(User.email == "admin@lotuss.com")
-            result = await session.execute(stmt)
-            admin = result.scalar_one_or_none()
+            # 2. Seed Default Admin Users if missing
+            admin_emails = [
+                ("admin@gmail.com", "Gmail Admin", "ADMIN-000"),
+                ("siegadevelopments@gmail.com", "Siega Admin", "ADMIN-002"),
+                ("admin@lotuss.com", "System Administrator", "ADMIN-001"),
+            ]
             
-            if not admin:
-                admin = User(
-                    id=uuid.uuid4(),
-                    email="admin@lotuss.com",
-                    password_hash=hash_password("Admin@123!"),
-                    first_name="System",
-                    last_name="Administrator",
-                    employee_id="ADMIN-001",
-                    role_id=roles_map["SUPER_ADMIN"].id,
-                    timezone="Asia/Manila",
-                    is_active=True,
-                )
-                session.add(admin)
-                logger.info("Seeded default admin user: admin@lotuss.com")
+            for email_addr, name_str, emp_id in admin_emails:
+                stmt = select(User).where(User.email == email_addr)
+                result = await session.execute(stmt)
+                admin = result.scalar_one_or_none()
+                
+                if not admin:
+                    first_n, last_n = name_str.split(" ", 1)
+                    admin = User(
+                        id=uuid.uuid4(),
+                        email=email_addr,
+                        password_hash=hash_password("Admin@123!"),
+                        first_name=first_n,
+                        last_name=last_n,
+                        employee_id=emp_id,
+                        role_id=roles_map["SUPER_ADMIN"].id,
+                        timezone="Asia/Manila",
+                        is_active=True,
+                    )
+                    session.add(admin)
+                    logger.info(f"Seeded admin user: {email_addr}")
 
             # 3. Seed Default Shift Types if missing
             shifts_def = [
