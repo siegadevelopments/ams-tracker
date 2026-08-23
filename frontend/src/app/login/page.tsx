@@ -65,7 +65,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 className="form-input"
-                placeholder="ernest.siega@ark.co.th"
+                placeholder="name@ark.co.th"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
