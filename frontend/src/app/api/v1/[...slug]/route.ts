@@ -19,7 +19,7 @@ const DEMO_USER = {
   first_name: "Ernest",
   last_name: "Siega",
   employee_id: "ADMIN-SA-001",
-  role: "SUPER_ADMIN",
+  role: "AMS_HEAD",
   domain: "AMS Operations",
   lotuss_name: "Lotus's Thailand HQ",
   timezone: "Asia/Manila",

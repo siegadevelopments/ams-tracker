@@ -2,8 +2,8 @@
 
 /**
  * Attendance & Team Shift Scheduling Page.
- * Displays "Engineers on Duty Right Now" at the top with shift times.
- * Allows Team Leads and Super Admins to schedule shift assignments for team members.
+ * - AMS Head: Sees engineers on duty across all corporate domains.
+ * - Team Leads: Can ONLY see engineers on duty in their assigned domain and schedule shifts for domain members.
  */
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -22,7 +22,7 @@ const INITIAL_DUTY_ENGINEERS = [
     id: "eng-101",
     name: "Ernest Siega",
     email: "ernest.siega@ark.co.th",
-    role: "SUPER_ADMIN",
+    role: "AMS_HEAD",
     domain: "Supply chain and Planning Domain",
     shift_name: "Shift 1",
     shift_time: "8:00 AM - 5:00 PM",
@@ -95,9 +95,19 @@ export default function AttendancePage() {
   const { user } = useAuth();
   const [dutyEngineers, setDutyEngineers] = useState(INITIAL_DUTY_ENGINEERS);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const isAmsHead = user?.role === "AMS_HEAD" || user?.role === "SUPER_ADMIN";
+  const userDomain = (user as any)?.domain || "Supply chain and Planning Domain";
+  const canSchedule = ["AMS_HEAD", "SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD"].includes(user?.role || "");
+
+  // Filter engineers on duty according to role domain scoping rules
+  const visibleDutyEngineers = dutyEngineers.filter((eng) => {
+    if (isAmsHead) return true;
+    if (!eng.domain || !userDomain) return true;
+    return eng.domain === userDomain || eng.domain.toLowerCase().includes(userDomain.toLowerCase().split(" ")[0]);
+  });
 
   // Scheduling Form State
   const [scheduleForm, setScheduleForm] = useState({
@@ -107,8 +117,6 @@ export default function AttendancePage() {
     schedule_date: new Date().toISOString().split("T")[0],
     notes: "",
   });
-
-  const canSchedule = ["SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD"].includes(user?.role || "");
 
   const handleScheduleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,7 +130,7 @@ export default function AttendancePage() {
       name: scheduleForm.engineer_name,
       email: scheduleForm.engineer_email,
       role: "AMS_ENGINEER",
-      domain: (user as any)?.domain || "Supply chain and Planning Domain",
+      domain: isAmsHead ? "Supply chain and Planning Domain" : userDomain,
       shift_name: selectedShift.name,
       shift_time: selectedShift.time,
       status: "WORKING",
@@ -141,7 +149,7 @@ export default function AttendancePage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Attendance & Shift Roster</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Engineers on Duty & Team Lead Shift Scheduling
+            {isAmsHead ? "Global Attendance & Engineers on Duty (AMS Head Control)" : `Domain Attendance & Roster — ${userDomain}`}
           </p>
         </div>
 
@@ -172,9 +180,13 @@ export default function AttendancePage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
               </span>
-              <h2 className="text-lg font-extrabold text-white tracking-wide">Engineers on Duty Right Now</h2>
+              <h2 className="text-lg font-extrabold text-white tracking-wide">
+                Engineers on Duty Right Now {isAmsHead ? "(All Domains)" : `(${userDomain})`}
+              </h2>
             </div>
-            <p className="text-xs text-slate-300">Active engineers currently on shift across all corporate domains</p>
+            <p className="text-xs text-slate-300">
+              {isAmsHead ? "Active engineers currently on shift across all corporate domains" : `Active engineers currently on shift in ${userDomain}`}
+            </p>
           </div>
 
           {/* 4 Official Shifts Quick Reference Legend */}
@@ -195,27 +207,33 @@ export default function AttendancePage() {
         </div>
 
         {/* On Duty Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {dutyEngineers.map((eng) => (
-            <div key={eng.id} className="bg-slate-800/80 backdrop-blur-md rounded-xl p-4 border border-slate-700 hover:border-slate-600 transition-all flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-md">
-                {eng.name.split(" ").map(n => n[0]).join("")}
-              </div>
+        {visibleDutyEngineers.length === 0 ? (
+          <div className="py-8 text-center text-slate-400 italic text-sm">
+            No active engineers currently on duty in your domain ({userDomain}).
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {visibleDutyEngineers.map((eng) => (
+              <div key={eng.id} className="bg-slate-800/80 backdrop-blur-md rounded-xl p-4 border border-slate-700 hover:border-slate-600 transition-all flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-md">
+                  {eng.name.split(" ").map(n => n[0]).join("")}
+                </div>
 
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-1 mb-1">
-                  <p className="text-xs font-bold text-white truncate">{eng.name}</p>
-                  <StatusBadge status={eng.status} />
-                </div>
-                <p className="text-[11px] text-slate-300 truncate">{eng.domain}</p>
-                <div className="mt-2.5 pt-2 border-t border-slate-700/60 flex items-center justify-between text-[10px] text-slate-400">
-                  <span className="font-semibold text-blue-300">⏱️ {eng.shift_name} ({eng.shift_time})</span>
-                  <span>Clocked in: {eng.actual_start}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <p className="text-xs font-bold text-white truncate">{eng.name}</p>
+                    <StatusBadge status={eng.status} />
+                  </div>
+                  <p className="text-[11px] text-slate-300 truncate">{eng.domain}</p>
+                  <div className="mt-2.5 pt-2 border-t border-slate-700/60 flex items-center justify-between text-[10px] text-slate-400">
+                    <span className="font-semibold text-blue-300">⏱️ {eng.shift_name} ({eng.shift_time})</span>
+                    <span>Clocked in: {eng.actual_start}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Team Lead Scheduling Modal */}
@@ -262,7 +280,7 @@ export default function AttendancePage() {
                     });
                   }}
                 >
-                  <option value="Ernest Siega">Ernest Siega (Super Admin)</option>
+                  {isAmsHead && <option value="Ernest Siega">Ernest Siega (AMS Head)</option>}
                   <option value="Maria Santos">Maria Santos (Team Lead - Supply Chain)</option>
                   <option value="Alex Rivera">Alex Rivera (Engineer)</option>
                   <option value="Somchai Prasert">Somchai Prasert (Team Lead - Store Ops)</option>
@@ -334,10 +352,12 @@ export default function AttendancePage() {
         <div className="p-5 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h2 className="font-bold text-slate-900 text-base">Full Shift Attendance Roster</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Historical clock-in logs and shift assignments</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {isAmsHead ? "Viewing all attendance logs across all corporate domains" : `Viewing attendance logs for ${userDomain}`}
+            </p>
           </div>
           <span className="text-xs font-semibold bg-slate-100 text-slate-700 px-3 py-1 rounded-full border border-slate-200">
-            {dutyEngineers.length} Active Records
+            {visibleDutyEngineers.length} Active Records
           </span>
         </div>
 
@@ -354,7 +374,7 @@ export default function AttendancePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {dutyEngineers.map((eng) => (
+              {visibleDutyEngineers.map((eng) => (
                 <tr key={eng.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-3.5 px-4 font-semibold text-slate-900">
                     {eng.name}

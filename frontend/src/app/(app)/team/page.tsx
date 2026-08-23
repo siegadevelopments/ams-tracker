@@ -2,12 +2,8 @@
 
 /**
  * Team & Domain Management Page.
- * Allows Super Admins to create and assign a Team Lead per Domain across:
- * - Supply chain and Planning Domain
- * - Store Ops, Sales
- * - Finance
- * - Integration and Middleware Domain
- * - Buy and Merchandise Domain
+ * - AMS Head: Can view all team members across all domains and assign Team Leads per Domain.
+ * - Team Leads: Can ONLY view members belonging to their assigned domain.
  */
 
 import React, { useEffect, useState } from "react";
@@ -40,7 +36,8 @@ export default function TeamPage() {
   const [createError, setCreateError] = useState("");
   const [createSuccess, setCreateSuccess] = useState("");
 
-  const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
+  const isAmsHead = currentUser?.role === "AMS_HEAD" || currentUser?.role === "SUPER_ADMIN";
+  const userDomain = (currentUser as any)?.domain || "Supply chain and Planning Domain";
 
   useEffect(() => {
     loadUsers();
@@ -92,12 +89,24 @@ export default function TeamPage() {
   };
 
   const getLeadForDomain = (domName: string) => {
-    return users.find((u) => u.domain === domName && (u.role === "TEAM_LEAD" || u.role === "SUPER_ADMIN" || u.role === "AMS_MANAGER"));
+    return users.find((u) => u.domain === domName && (u.role === "TEAM_LEAD" || u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" || u.role === "AMS_MANAGER"));
   };
 
-  const filteredUsers = selectedDomainFilter === "ALL"
-    ? users
-    : users.filter((u) => u.domain === selectedDomainFilter);
+  // Team Leads ONLY see domains & users belonging to their domain
+  const visibleDomains = isAmsHead
+    ? OFFICIAL_DOMAINS
+    : OFFICIAL_DOMAINS.filter((d) => d === userDomain || d.toLowerCase().includes(userDomain.toLowerCase().split(" ")[0]));
+
+  const filteredUsers = users.filter((u) => {
+    if (!isAmsHead && userDomain) {
+      const match = u.domain === userDomain || (u.domain && u.domain.toLowerCase().includes(userDomain.toLowerCase().split(" ")[0]));
+      if (!match) return false;
+    }
+    if (selectedDomainFilter !== "ALL" && u.domain !== selectedDomainFilter) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-8">
@@ -106,10 +115,10 @@ export default function TeamPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Domain & Team Management</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Corporate Domain Leadership & Team Lead Assignments
+            {isAmsHead ? "AMS Head Global Directory & Corporate Domain Leadership" : `Team Directory — ${userDomain}`}
           </p>
         </div>
-        {isSuperAdmin && (
+        {isAmsHead && (
           <button
             onClick={() => { setShowCreateLead(!showCreateLead); setCreateError(""); setCreateSuccess(""); }}
             className="btn btn-primary shadow-sm flex items-center gap-2 self-start sm:self-auto"
@@ -126,15 +135,15 @@ export default function TeamPage() {
         </div>
       )}
 
-      {/* Create Team Lead Form */}
-      {showCreateLead && (
+      {/* Create Team Lead Form (AMS Head Only) */}
+      {showCreateLead && isAmsHead && (
         <div className="bg-white rounded-2xl border border-blue-100 shadow-xl p-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500"></div>
           <h2 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
-            <span>👑</span> Assign Corporate Team Lead per Domain
+            <span>👑</span> Assign Corporate Team Lead per Domain (AMS Head Control)
           </h2>
           <p className="text-xs text-slate-500 mb-6">
-            Assign a designated Team Lead to oversee operations for a specific domain.
+            As AMS Head, assign a designated Team Lead to oversee operations for a specific domain.
           </p>
 
           {createError && (
@@ -241,10 +250,10 @@ export default function TeamPage() {
       {/* Domain Leadership Grid Summary */}
       <div>
         <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <span>🏛️</span> Domain Team Lead Overview
+          <span>🏛️</span> {isAmsHead ? "Domain Team Lead Overview" : `My Domain Leadership — ${userDomain}`}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {OFFICIAL_DOMAINS.map((domName) => {
+          {visibleDomains.map((domName) => {
             const lead = getLeadForDomain(domName);
             return (
               <div key={domName} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
@@ -283,7 +292,7 @@ export default function TeamPage() {
                   )}
                 </div>
 
-                {isSuperAdmin && (
+                {isAmsHead && (
                   <button
                     onClick={() => {
                       setNewLead({
@@ -310,25 +319,31 @@ export default function TeamPage() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="font-bold text-slate-900 text-base">Corporate User Directory</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Filter team members and leads by domain</p>
+            <h2 className="font-bold text-slate-900 text-base">
+              {isAmsHead ? "AMS Head Global Directory" : `Domain Team Directory (${userDomain})`}
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {isAmsHead ? "Viewing all corporate members across all domains" : "Viewing members belonging to your assigned domain"}
+            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">Filter Domain:</span>
-            <select
-              className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white"
-              value={selectedDomainFilter}
-              onChange={(e) => setSelectedDomainFilter(e.target.value)}
-            >
-              <option value="ALL">All Domains</option>
-              {OFFICIAL_DOMAINS.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isAmsHead && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-slate-500">Filter Domain:</span>
+              <select
+                className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white"
+                value={selectedDomainFilter}
+                onChange={(e) => setSelectedDomainFilter(e.target.value)}
+              >
+                <option value="ALL">All Domains</option>
+                {OFFICIAL_DOMAINS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -358,10 +373,10 @@ export default function TeamPage() {
                     <td className="py-3 px-4 font-medium text-slate-700">{u.domain || "—"}</td>
                     <td className="py-3 px-4">
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                        u.role === "SUPER_ADMIN" ? "bg-purple-100 text-purple-700" :
+                        u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" ? "bg-purple-100 text-purple-700" :
                         u.role === "TEAM_LEAD" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
                       }`}>
-                        {u.role.replace("_", " ")}
+                        {u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" ? "AMS Head" : u.role.replace("_", " ")}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-xs">{u.lotuss_name || "Lotus's Thailand HQ"}</td>

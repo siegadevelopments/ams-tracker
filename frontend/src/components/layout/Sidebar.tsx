@@ -21,11 +21,11 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "📊" },
   { label: "My Shift", href: "/my-shift", icon: "⏱️" },
-  { label: "Attendance", href: "/attendance", icon: "📋", roles: ["SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD", "VIEWER"] },
+  { label: "Attendance", href: "/attendance", icon: "📋", roles: ["AMS_HEAD", "SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD", "VIEWER"] },
   { label: "Tickets", href: "/tickets", icon: "🎫" },
-  { label: "Reports", href: "/reports", icon: "📈", roles: ["SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD"] },
-  { label: "Team", href: "/team", icon: "👥", section: "manage", roles: ["SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD"] },
-  { label: "Settings", href: "/settings", icon: "⚙️", section: "manage", roles: ["SUPER_ADMIN"] },
+  { label: "Reports", href: "/reports", icon: "📈", roles: ["AMS_HEAD", "SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD"] },
+  { label: "Team", href: "/team", icon: "👥", section: "manage", roles: ["AMS_HEAD", "SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD"] },
+  { label: "Settings", href: "/settings", icon: "⚙️", section: "manage", roles: ["AMS_HEAD", "SUPER_ADMIN"] },
 ];
 
 export default function Sidebar() {
@@ -168,7 +168,7 @@ export default function Sidebar() {
                   {user?.first_name} {user?.last_name}
                 </p>
                 <p className="text-[10px] font-semibold text-blue-400 truncate">
-                  {userRole.replace("_", " ")}
+                  {userRole === "AMS_HEAD" || userRole === "SUPER_ADMIN" ? "AMS Head" : userRole.replace("_", " ")}
                 </p>
               </div>
             </div>

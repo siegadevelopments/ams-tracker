@@ -379,7 +379,7 @@ export default function LoginPage() {
                   <p className="text-xs text-slate-500 truncate">ernest.siega@ark.co.th</p>
                 </div>
                 <span className="text-[10px] font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full shrink-0">
-                  Super Admin
+                  AMS Head
                 </span>
               </button>
 

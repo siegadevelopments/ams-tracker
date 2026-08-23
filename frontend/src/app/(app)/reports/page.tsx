@@ -3,7 +3,8 @@
 /**
  * Reports & Activity Analytics Page.
  * Displays Daily, Weekly, and Monthly activity reports.
- * Accessible to Team Leads, AMS Managers, and Super Admins.
+ * - AMS Head: Has global visibility across all domains.
+ * - Team Leads: Can ONLY view and export activity logs belonging to their domain.
  */
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -38,7 +39,7 @@ const MOCK_ACTIVITY_LOGS: ActivityLogItem[] = [
     user_name: "Ernest Siega",
     user_email: "ernest.siega@ark.co.th",
     domain: "Supply chain and Planning Domain",
-    shift_type: "Morning Shift",
+    shift_type: "Shift 1",
     activity_type: "INCIDENT",
     duration_minutes: 45,
     ticket_number: "INC-9821",
@@ -50,7 +51,7 @@ const MOCK_ACTIVITY_LOGS: ActivityLogItem[] = [
     user_name: "Maria Santos",
     user_email: "maria.santos@ark.co.th",
     domain: "Supply chain and Planning Domain",
-    shift_type: "Morning Shift",
+    shift_type: "Shift 1",
     activity_type: "SERVICE_REQUEST",
     duration_minutes: 30,
     ticket_number: "REQ-4402",
@@ -62,7 +63,7 @@ const MOCK_ACTIVITY_LOGS: ActivityLogItem[] = [
     user_name: "Somchai Prasert",
     user_email: "somchai.p@ark.co.th",
     domain: "Store Ops, Sales",
-    shift_type: "Morning Shift",
+    shift_type: "Shift 2",
     activity_type: "MONITORING",
     duration_minutes: 60,
     ticket_number: "MON-1102",
@@ -74,7 +75,7 @@ const MOCK_ACTIVITY_LOGS: ActivityLogItem[] = [
     user_name: "Ananya Rattana",
     user_email: "ananya.r@ark.co.th",
     domain: "Finance",
-    shift_type: "Morning Shift",
+    shift_type: "Training",
     activity_type: "MAINTENANCE",
     duration_minutes: 90,
     ticket_number: "FIN-3301",
@@ -86,7 +87,7 @@ const MOCK_ACTIVITY_LOGS: ActivityLogItem[] = [
     user_name: "Karthik Subramanian",
     user_email: "karthik.s@ark.co.th",
     domain: "Integration and Middleware Domain",
-    shift_type: "Morning Shift",
+    shift_type: "Shift 3",
     activity_type: "DEPLOYMENT",
     duration_minutes: 40,
     ticket_number: "DEP-8812",
@@ -98,7 +99,7 @@ const MOCK_ACTIVITY_LOGS: ActivityLogItem[] = [
     user_name: "Nattapong Kerdpokaphan",
     user_email: "nattapong.k@ark.co.th",
     domain: "Buy and Merchandise Domain",
-    shift_type: "Morning Shift",
+    shift_type: "Shift 1",
     activity_type: "INCIDENT",
     duration_minutes: 50,
     ticket_number: "INC-9940",
@@ -114,16 +115,23 @@ export default function ReportsPage() {
   const [downloadSuccess, setDownloadSuccess] = useState("");
 
   const userRole = user?.role || "";
-  const canAccessReports = ["SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD"].includes(userRole);
+  const isAmsHead = userRole === "AMS_HEAD" || userRole === "SUPER_ADMIN";
+  const userDomain = (user as any)?.domain || "Supply chain and Planning Domain";
+  const canAccessReports = ["AMS_HEAD", "SUPER_ADMIN", "AMS_MANAGER", "TEAM_LEAD"].includes(userRole);
 
   const filterLogs = useCallback(() => {
     return MOCK_ACTIVITY_LOGS.filter((item) => {
+      // If not AMS Head, restrict strictly to their own domain
+      if (!isAmsHead && userDomain) {
+        const match = item.domain === userDomain || item.domain.toLowerCase().includes(userDomain.toLowerCase().split(" ")[0]);
+        if (!match) return false;
+      }
       if (selectedDomain !== "ALL" && item.domain !== selectedDomain) {
         return false;
       }
       return true;
     });
-  }, [selectedDomain]);
+  }, [selectedDomain, isAmsHead, userDomain]);
 
   const filteredLogs = filterLogs();
 
@@ -133,21 +141,21 @@ export default function ReportsPage() {
       total_activities: filteredLogs.length,
       total_hours: 6.1,
       sla_compliance: "98.5%",
-      incidents_resolved: 4,
+      incidents_resolved: Math.max(1, filteredLogs.length),
       punctuality_rate: "96.2%",
     },
     weekly: {
       total_activities: filteredLogs.length * 5,
       total_hours: 42.5,
       sla_compliance: "97.8%",
-      incidents_resolved: 22,
+      incidents_resolved: filteredLogs.length * 4,
       punctuality_rate: "95.9%",
     },
     monthly: {
       total_activities: filteredLogs.length * 22,
       total_hours: 184.0,
       sla_compliance: "98.1%",
-      incidents_resolved: 88,
+      incidents_resolved: filteredLogs.length * 18,
       punctuality_rate: "96.8%",
     },
   };
@@ -159,7 +167,6 @@ export default function ReportsPage() {
     setDownloadSuccess("");
 
     try {
-      // Build CSV headers and rows
       const headers = ["ID", "Timestamp", "Employee", "Email", "Domain", "Shift", "Activity Type", "Duration (Min)", "Ticket #", "Notes"];
       const rows = filteredLogs.map((log) => [
         log.id,
@@ -209,7 +216,7 @@ export default function ReportsPage() {
         </div>
         <h2 className="text-lg font-bold text-slate-900">Access Restricted</h2>
         <p className="text-sm text-slate-500 mt-1">
-          Activity reporting and data download are restricted to Team Leads, AMS Managers, and Super Admins.
+          Activity reporting and data download are restricted to Team Leads, AMS Managers, and AMS Head.
         </p>
       </div>
     );
@@ -222,7 +229,7 @@ export default function ReportsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Operational Activity Reporting System</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Daily, Weekly, and Monthly team activity logs, SLA metrics, and report downloads
+            {isAmsHead ? "Global Activity Reports & Executive Analytics (AMS Head Control)" : `Domain Activity Analytics — ${userDomain}`}
           </p>
         </div>
 
@@ -287,21 +294,27 @@ export default function ReportsPage() {
         </div>
 
         {/* Domain Filter */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Filter Domain:</span>
-          <select
-            className="px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-blue-500"
-            value={selectedDomain}
-            onChange={(e) => setSelectedDomain(e.target.value)}
-          >
-            <option value="ALL">All Corporate Domains</option>
-            {OFFICIAL_DOMAINS.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-        </div>
+        {isAmsHead ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Filter Domain:</span>
+            <select
+              className="px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-blue-500"
+              value={selectedDomain}
+              onChange={(e) => setSelectedDomain(e.target.value)}
+            >
+              <option value="ALL">All Corporate Domains</option>
+              {OFFICIAL_DOMAINS.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
+            🔒 Scoped to Domain: {userDomain}
+          </div>
+        )}
       </div>
 
       {/* KPI Cards */}
@@ -345,7 +358,7 @@ export default function ReportsPage() {
               <span>📋</span> {frequency.charAt(0).toUpperCase() + frequency.slice(1)} Activity Log Details
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Showing operational activities for {selectedDomain === "ALL" ? "All Corporate Domains" : selectedDomain}
+              Showing operational activities for {isAmsHead ? (selectedDomain === "ALL" ? "All Corporate Domains" : selectedDomain) : userDomain}
             </p>
           </div>
           <span className="text-xs font-semibold bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-100">
