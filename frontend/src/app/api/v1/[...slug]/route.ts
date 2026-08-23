@@ -271,6 +271,13 @@ export async function GET(request: NextRequest) {
   const path = url.pathname.replace(/^\/api\/v1/, "");
 
   if (path === "/auth/me" || path === "/auth/me/") {
+    const authHeader = request.headers.get("authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (token.startsWith("token-")) {
+      const userId = token.replace("token-", "");
+      const foundUser = teamMembersStore.find((u) => u.id === userId);
+      if (foundUser) return NextResponse.json(foundUser);
+    }
     return NextResponse.json(DEMO_USER);
   }
 
@@ -358,15 +365,19 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
 
   if (path === "/auth/login" || path === "/auth/login/") {
+    const targetEmail = (body.email || "").trim().toLowerCase();
+    const matchedUser = teamMembersStore.find((u) => u.email.toLowerCase() === targetEmail) || DEMO_USER;
+    const token = `token-${matchedUser.id}`;
+
     return NextResponse.json({
-      access_token: "demo-jwt-token-ark-co-th",
-      refresh_token: "demo-refresh-token-ark-co-th",
+      access_token: token,
+      refresh_token: `refresh-${matchedUser.id}`,
       token_type: "bearer",
-      user: DEMO_USER,
+      user: matchedUser,
       data: {
-        user: DEMO_USER,
-        token: "demo-jwt-token-ark-co-th",
-        access_token: "demo-jwt-token-ark-co-th",
+        user: matchedUser,
+        token: token,
+        access_token: token,
       },
       message: "Login successful",
     });
