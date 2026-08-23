@@ -217,6 +217,55 @@ async function handleApiRequest(request: NextRequest, context: any) {
       });
     }
 
+    // 2b. Auth Register endpoint (/auth/register)
+    if (path.includes("register") && method === "POST") {
+      let email = "";
+      let firstName = "";
+      let lastName = "";
+      try {
+        const body = await request.json();
+        email = (body?.email || "").trim().toLowerCase();
+        firstName = (body?.first_name || "").trim();
+        lastName = (body?.last_name || "").trim();
+      } catch {
+        // Ignore json parse error
+      }
+
+      if (email && !email.endsWith("@ark.co.th")) {
+        return NextResponse.json(
+          { error: { code: "FORBIDDEN_DOMAIN", message: "Registration restricted: Only @ark.co.th corporate emails are permitted to register." } },
+          { status: 403 }
+        );
+      }
+
+      const userEmail = email || "new.user@ark.co.th";
+      const nameParts = userEmail.split("@")[0].split(".");
+      const defaultFirst = nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : "New";
+      const defaultLast = nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : "User";
+
+      const registeredUser = {
+        id: `usr-${Date.now()}`,
+        email: userEmail,
+        first_name: firstName || defaultFirst,
+        last_name: lastName || defaultLast,
+        employee_id: `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
+        role: "AMS_AGENT",
+        timezone: "Asia/Manila",
+        is_active: true,
+      };
+
+      const mockToken =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDEiLCJlbWFpbCI6ImVybmVzdC5zaWVnYUBhcmsuY28udGgiLCJyb2xlIjoiU1VQRVJfQURNSU4iLCJleHAiOjE5OTk5OTk5OTl9.demo_signature";
+
+      return NextResponse.json({
+        access_token: mockToken,
+        refresh_token: mockToken,
+        token_type: "bearer",
+        expires_in: 3600,
+        user: registeredUser,
+      });
+    }
+
     // 3. Current User profile endpoint (/auth/me)
     if (path.includes("me")) {
       return NextResponse.json(DEMO_USER);
