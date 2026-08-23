@@ -2,9 +2,8 @@
 
 /**
  * Team & Domain Management Page.
- * - AMS Head: Can view all team members across all domains, assign Team Leads, and add team members.
+ * - AMS Head: Can view all team members, assign Team Leads, add new members, and edit team member position & details.
  * - Team Leads: Can view members belonging to their domain and add team members.
- * - Adding a team member creates an account and dispatches an automated Onboarding Invitation Email.
  */
 
 import React, { useEffect, useState } from "react";
@@ -19,6 +18,14 @@ const OFFICIAL_DOMAINS = [
   "Buy and Merchandise Domain",
 ];
 
+const POSITION_OPTIONS = [
+  { value: "AMS_ENGINEER", label: "AMS Engineer" },
+  { value: "SENIOR_ENGINEER", label: "Senior Engineer" },
+  { value: "SUPPORT_ANALYST", label: "Support Analyst" },
+  { value: "TEAM_LEAD", label: "Team Lead" },
+  { value: "AMS_HEAD", label: "AMS Head" },
+];
+
 export default function TeamPage() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
@@ -26,6 +33,17 @@ export default function TeamPage() {
   const [showCreateLead, setShowCreateLead] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [selectedDomainFilter, setSelectedDomainFilter] = useState("ALL");
+
+  // Edit Modal State (AMS Head Control)
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({
+    first_name: "",
+    last_name: "",
+    role: "AMS_ENGINEER",
+    domain: OFFICIAL_DOMAINS[0],
+    lotuss_name: "Lotus's Thailand HQ",
+    is_active: true,
+  });
 
   const isAmsHead = currentUser?.role === "AMS_HEAD" || currentUser?.role === "SUPER_ADMIN";
   const isTeamLead = currentUser?.role === "TEAM_LEAD";
@@ -41,7 +59,7 @@ export default function TeamPage() {
     lotuss_name: "Lotus's Thailand HQ",
   });
 
-  // Form State for Adding Team Member & Sending Onboarding Invitation (AMS Head & Team Leads)
+  // Form State for Adding Team Member
   const [newMember, setNewMember] = useState({
     first_name: "",
     last_name: "",
@@ -68,6 +86,43 @@ export default function TeamPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenEditModal = (targetUser: User) => {
+    setEditingUser(targetUser);
+    setEditForm({
+      first_name: targetUser.first_name,
+      last_name: targetUser.last_name,
+      role: targetUser.role,
+      domain: targetUser.domain || OFFICIAL_DOMAINS[0],
+      lotuss_name: targetUser.lotuss_name || "Lotus's Thailand HQ",
+      is_active: targetUser.is_active,
+    });
+    setCreateError("");
+  };
+
+  const handleSaveEditUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === editingUser.id
+          ? {
+              ...u,
+              first_name: editForm.first_name.trim(),
+              last_name: editForm.last_name.trim(),
+              role: editForm.role,
+              domain: editForm.domain,
+              lotuss_name: editForm.lotuss_name.trim(),
+              is_active: editForm.is_active,
+            }
+          : u
+      )
+    );
+
+    setCreateSuccess(`✓ Successfully updated ${editForm.first_name} ${editForm.last_name}'s position & details.`);
+    setEditingUser(null);
   };
 
   const handleCreateTeamLead = async (e: React.FormEvent) => {
@@ -209,6 +264,123 @@ export default function TeamPage() {
               <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px] uppercase">Email Sent</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* EDIT TEAM MEMBER POSITION & DETAILS MODAL (AMS HEAD ONLY) */}
+      {editingUser && isAmsHead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-100 relative">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">✏️</span>
+                <h3 className="font-bold text-slate-900 text-base">Edit Team Member Details & Position</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditUser} className="space-y-4">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700">
+                Editing profile for: <strong>{editingUser.email}</strong>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">First Name</label>
+                  <input
+                    type="text"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500"
+                    value={editForm.first_name}
+                    onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500"
+                    value={editForm.last_name}
+                    onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Position / Role</label>
+                  <select
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-blue-500"
+                    value={editForm.role}
+                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                  >
+                    {POSITION_OPTIONS.map((pos) => (
+                      <option key={pos.value} value={pos.value}>{pos.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Corporate Domain</label>
+                  <select
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-blue-500"
+                    value={editForm.domain}
+                    onChange={(e) => setEditForm({ ...editForm, domain: e.target.value })}
+                  >
+                    {OFFICIAL_DOMAINS.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Lotus's Name / Branch Unit</label>
+                <input
+                  type="text"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  value={editForm.lotuss_name}
+                  onChange={(e) => setEditForm({ ...editForm, lotuss_name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Account Status</label>
+                <select
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-blue-500"
+                  value={editForm.is_active ? "active" : "inactive"}
+                  onChange={(e) => setEditForm({ ...editForm, is_active: e.target.value === "active" })}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive / Suspended</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20"
+                >
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium rounded-xl"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -572,9 +744,10 @@ export default function TeamPage() {
                   <th className="py-3 px-4">Name</th>
                   <th className="py-3 px-4">Email</th>
                   <th className="py-3 px-4">Domain</th>
-                  <th className="py-3 px-4">Role</th>
+                  <th className="py-3 px-4">Role / Position</th>
                   <th className="py-3 px-4">Lotus's Unit</th>
                   <th className="py-3 px-4">Status</th>
+                  {isAmsHead && <th className="py-3 px-4 text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -586,21 +759,31 @@ export default function TeamPage() {
                     <td className="py-3 px-4">{u.email}</td>
                     <td className="py-3 px-4 font-medium text-slate-700">{u.domain || "—"}</td>
                     <td className="py-3 px-4">
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                        u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" ? "bg-purple-100 text-purple-700" :
-                        u.role === "TEAM_LEAD" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
+                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                        u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" ? "bg-purple-100 text-purple-700 border border-purple-200" :
+                        u.role === "TEAM_LEAD" ? "bg-blue-100 text-blue-700 border border-blue-200" : "bg-slate-100 text-slate-700 border border-slate-200"
                       }`}>
                         {u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" ? "AMS Head" : u.role.replace("_", " ")}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-xs">{u.lotuss_name || "Lotus's Thailand HQ"}</td>
                     <td className="py-3 px-4">
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                        u.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                        u.is_active ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"
                       }`}>
-                        {u.is_active ? "Active" : "Pending Onboarding"}
+                        {u.is_active ? "Active" : "Inactive"}
                       </span>
                     </td>
+                    {isAmsHead && (
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={() => handleOpenEditModal(u)}
+                          className="px-2.5 py-1 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
+                        >
+                          ✏️ Edit Details
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
