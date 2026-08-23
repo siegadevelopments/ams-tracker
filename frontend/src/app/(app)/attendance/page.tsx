@@ -268,6 +268,7 @@ export default function AttendancePage() {
 
   // Auto-Schedule Roster State (5 Work Days / 2 Off Days)
   const [showAutoScheduleModal, setShowAutoScheduleModal] = useState(false);
+  const [showAutoScheduleDropdown, setShowAutoScheduleDropdown] = useState(false);
   const [autoScheduleConfig, setAutoScheduleConfig] = useState({
     targetShiftId: "st-1",
     offDay1: 6, // 6 = Saturday
@@ -440,6 +441,39 @@ export default function AttendancePage() {
     setTimeout(() => setSuccess(""), 5000);
   };
 
+  const handleAutoScheduleSpecificShift = (targetShiftId: string, shiftName: string) => {
+    if (scopedMembers.length === 0) {
+      setSuccess("No team members available in your domain to auto-schedule.");
+      return;
+    }
+
+    const updatedSchedules = { ...dateSchedules };
+    const startDate = new Date(selectedDate + "T00:00:00");
+    const daysCount = 7; // Auto-plots full week (7 days)
+
+    scopedMembers.forEach((member) => {
+      for (let i = 0; i < daysCount; i++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        const dateStr = currentDate.toISOString().split("T")[0];
+        const dayOfWeek = currentDate.getDay(); // 0 = Sun, 6 = Sat
+
+        const isOffDay = dayOfWeek === 6 || dayOfWeek === 0;
+        const assignedShiftId = isOffDay ? "st-5" : targetShiftId;
+
+        if (!updatedSchedules[dateStr]) {
+          updatedSchedules[dateStr] = {};
+        }
+        updatedSchedules[dateStr][member.id] = assignedShiftId;
+      }
+    });
+
+    setDateSchedules(updatedSchedules);
+    const domainText = isAmsHead ? "Global Roster" : userDomain;
+    setSuccess(`Auto-Scheduled ${scopedMembers.length} member(s) (${domainText}) to ${shiftName} (5:2 work/off policy) starting from ${selectedDate}!`);
+    setTimeout(() => setSuccess(""), 5000);
+  };
+
   const handleAutoDivide3Shifts = () => {
     if (scopedMembers.length === 0) {
       setSuccess("No team members available in your domain to auto-schedule.");
@@ -510,15 +544,81 @@ export default function AttendancePage() {
 
         {isLeadership && (
           <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
-            {/* Auto-Schedule 3-Shift Roster Button (Zero Inputs) */}
-            <button
-              type="button"
-              onClick={handleAutoDivide3Shifts}
-              className="px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-              title="Automatically divide team members across 3 shifts with 5:2 work/off roster"
-            >
-              <span>Auto-Schedule 3 Shifts</span>
-            </button>
+            {/* AUTO SCHEDULE BUTTON GROUP */}
+            <div className="relative inline-block text-left">
+              <div className="flex items-center bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs overflow-hidden transition-all">
+                <button
+                  type="button"
+                  onClick={handleAutoDivide3Shifts}
+                  className="px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition-all flex items-center gap-1.5 cursor-pointer border-r border-blue-500/50"
+                  title="Automatically divide team members across Shift 1, Shift 2, and Shift 3"
+                >
+                  <span>⚡ Auto-Schedule (3 Shifts)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAutoScheduleDropdown(!showAutoScheduleDropdown)}
+                  className="px-2.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition-all cursor-pointer flex items-center justify-center"
+                  title="Select Specific Shift Auto-Scheduler"
+                >
+                  <span className="text-[10px]">▼</span>
+                </button>
+              </div>
+
+              {showAutoScheduleDropdown && (
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 animate-fade-in">
+                  <div className="px-3.5 py-1.5 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Direct Shift Auto-Scheduler
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleAutoScheduleSpecificShift("st-1", "Shift 1 (8AM - 5PM)");
+                      setShowAutoScheduleDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-between cursor-pointer transition-colors"
+                  >
+                    <span>🌅 Add to Shift 1</span>
+                    <span className="text-[10px] text-slate-400 font-normal">08:00 - 17:00</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleAutoScheduleSpecificShift("st-2", "Shift 2 (2PM - 11PM)");
+                      setShowAutoScheduleDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-between cursor-pointer transition-colors"
+                  >
+                    <span>🌆 Add to Shift 2</span>
+                    <span className="text-[10px] text-slate-400 font-normal">14:00 - 23:00</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleAutoScheduleSpecificShift("st-3", "Shift 3 (11PM - 8AM)");
+                      setShowAutoScheduleDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-between cursor-pointer transition-colors"
+                  >
+                    <span>🌙 Add to Shift 3</span>
+                    <span className="text-[10px] text-slate-400 font-normal">23:00 - 08:00</span>
+                  </button>
+                  <div className="border-t border-slate-100 mt-1 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleAutoDivide3Shifts();
+                        setShowAutoScheduleDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-xs font-bold text-blue-600 hover:bg-blue-50 flex items-center justify-between cursor-pointer transition-colors"
+                    >
+                      <span>🔄 Divide Across All 3 Shifts</span>
+                      <span className="text-[10px] text-blue-500 font-semibold">Equal Split</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* DATE PICKER & ROSTER DATE SWITCHER */}
             <div className="flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs">
