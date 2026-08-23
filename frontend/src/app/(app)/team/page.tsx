@@ -21,10 +21,8 @@ const OFFICIAL_DOMAINS = [
 ];
 
 const POSITION_OPTIONS = [
-  { value: "AMS_ENGINEER", label: "AMS Engineer" },
-  { value: "SENIOR_ENGINEER", label: "Senior Engineer" },
-  { value: "SUPPORT_ANALYST", label: "Support Analyst" },
   { value: "TEAM_LEAD", label: "Team Lead" },
+  { value: "SUPPORT_ENGINEER", label: "Support Engineer" },
   { value: "AMS_HEAD", label: "AMS Head" },
 ];
 
@@ -41,7 +39,7 @@ export default function TeamPage() {
   const [editForm, setEditForm] = useState({
     first_name: "",
     last_name: "",
-    role: "AMS_ENGINEER",
+    role: "SUPPORT_ENGINEER",
     domain: OFFICIAL_DOMAINS[0],
     lotuss_name: "LTT",
     is_active: true,
@@ -68,7 +66,7 @@ export default function TeamPage() {
     email: "",
     domain: isAmsHead ? OFFICIAL_DOMAINS[0] : userDomain,
     lotuss_name: "LTT",
-    role: "AMS_ENGINEER",
+    role: "SUPPORT_ENGINEER",
   });
 
   const [createError, setCreateError] = useState("");
@@ -484,9 +482,7 @@ export default function TeamPage() {
                     value={newMember.role}
                     onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
                   >
-                    <option value="AMS_ENGINEER">AMS Engineer</option>
-                    <option value="SENIOR_ENGINEER">Senior Engineer</option>
-                    <option value="SUPPORT_ANALYST">Support Analyst</option>
+                    <option value="SUPPORT_ENGINEER">Support Engineer</option>
                     <option value="TEAM_LEAD">Team Lead</option>
                   </select>
                 </div>
