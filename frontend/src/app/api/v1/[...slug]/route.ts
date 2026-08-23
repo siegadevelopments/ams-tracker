@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 /**
  * Robust Next.js App Router Catch-All API Handler for /api/v1/*
- * Serves authentication, team status, tickets, shift management, and SLA reporting endpoints.
+ * Serves authentication, team status, domain team leads, tickets, shift management, and SLA reporting endpoints.
  */
+
+const OFFICIAL_DOMAINS = [
+  "Supply chain and Planning Domain",
+  "Store Ops, Sales",
+  "Finance",
+  "Integration and Middleware Domain",
+  "Buy and Merchandise Domain",
+];
 
 const DEMO_USER = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -17,6 +25,69 @@ const DEMO_USER = {
   timezone: "Asia/Manila",
   is_active: true,
 };
+
+let teamLeadsStore: any[] = [
+  {
+    id: "tl-001",
+    email: "maria.santos@ark.co.th",
+    first_name: "Maria",
+    last_name: "Santos",
+    employee_id: "TL-SCP-001",
+    role: "TEAM_LEAD",
+    domain: "Supply chain and Planning Domain",
+    lotuss_name: "Lotus's Thailand HQ",
+    timezone: "Asia/Manila",
+    is_active: true,
+  },
+  {
+    id: "tl-002",
+    email: "somchai.p@ark.co.th",
+    first_name: "Somchai",
+    last_name: "Prasert",
+    employee_id: "TL-STO-002",
+    role: "TEAM_LEAD",
+    domain: "Store Ops, Sales",
+    lotuss_name: "Lotus's Bangna Branch",
+    timezone: "Asia/Bangkok",
+    is_active: true,
+  },
+  {
+    id: "tl-003",
+    email: "ananya.r@ark.co.th",
+    first_name: "Ananya",
+    last_name: "Rattana",
+    employee_id: "TL-FIN-003",
+    role: "TEAM_LEAD",
+    domain: "Finance",
+    lotuss_name: "Lotus's Finance Division",
+    timezone: "Asia/Bangkok",
+    is_active: true,
+  },
+  {
+    id: "tl-004",
+    email: "karthik.s@ark.co.th",
+    first_name: "Karthik",
+    last_name: "Subramanian",
+    employee_id: "TL-INT-004",
+    role: "TEAM_LEAD",
+    domain: "Integration and Middleware Domain",
+    lotuss_name: "Lotus's Middleware Hub",
+    timezone: "Asia/Bangkok",
+    is_active: true,
+  },
+  {
+    id: "tl-005",
+    email: "nattapong.k@ark.co.th",
+    first_name: "Nattapong",
+    last_name: "Kerdpokaphan",
+    employee_id: "TL-BMD-005",
+    role: "TEAM_LEAD",
+    domain: "Buy and Merchandise Domain",
+    lotuss_name: "Lotus's Commercial Division",
+    timezone: "Asia/Bangkok",
+    is_active: true,
+  },
+];
 
 let currentShiftState: any = {
   id: "att-001",
@@ -284,7 +355,7 @@ async function handleApiRequest(request: NextRequest, context: any) {
         last_name: lastName || defaultLast,
         employee_id: `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
         role: "AMS_AGENT",
-        domain: domain || "AMS Operations",
+        domain: domain || "Supply chain and Planning Domain",
         lotuss_name: lotussName || "Lotus's Thailand HQ",
         timezone: "Asia/Manila",
         is_active: true,
@@ -302,37 +373,69 @@ async function handleApiRequest(request: NextRequest, context: any) {
       });
     }
 
-    // 7. Current User profile endpoint (/auth/me)
+    // 7. Team Lead Creation Endpoint (/users/team-lead)
+    if (path.includes("users/team-lead") && method === "POST") {
+      let body: any = {};
+      try {
+        body = await request.json();
+      } catch {}
+
+      const newLead = {
+        id: `tl-${Date.now()}`,
+        email: (body?.email || "").trim().toLowerCase(),
+        first_name: (body?.first_name || "").trim(),
+        last_name: (body?.last_name || "").trim(),
+        employee_id: `TL-${Math.floor(1000 + Math.random() * 9000)}`,
+        role: "TEAM_LEAD",
+        domain: body?.domain || "Supply chain and Planning Domain",
+        lotuss_name: body?.lotuss_name || "Lotus's Thailand HQ",
+        timezone: "Asia/Manila",
+        is_active: true,
+      };
+
+      // Replace or update Team Lead for the domain
+      teamLeadsStore = teamLeadsStore.filter((u) => u.domain !== newLead.domain);
+      teamLeadsStore.unshift(newLead);
+
+      return NextResponse.json({ data: newLead });
+    }
+
+    // 8. Users & Team Leads List (/users)
+    if (path === "users" || path.includes("users")) {
+      return NextResponse.json({ data: [DEMO_USER, ...teamLeadsStore] });
+    }
+
+    // 9. Current User profile endpoint (/auth/me)
     if (path.includes("me")) {
       return NextResponse.json(DEMO_USER);
     }
 
-    // 8. Team Status (/attendance/team-status)
+    // 10. Team Status (/attendance/team-status)
     if (path.includes("team-status")) {
       return NextResponse.json(MOCK_TEAM_STATUS);
     }
 
-    // 9. Current Attendance (/attendance/current)
+    // 11. Current Attendance (/attendance/current)
     if (path.includes("attendance/current") || path === "attendance") {
       return NextResponse.json({ data: currentShiftState });
     }
 
-    // 10. Shift Types (/shifts/types)
+    // 12. Shift Types (/shifts/types)
     if (path.includes("shifts/types") || path.includes("shift-types") || path === "shifts/types") {
       return NextResponse.json(MOCK_SHIFT_TYPES);
     }
 
-    // 11. Tickets (/tickets)
+    // 13. Tickets (/tickets)
     if (path.includes("tickets")) {
       return NextResponse.json(MOCK_TICKETS);
     }
 
-    // 12. Reports (/reports)
+    // 14. Reports (/reports)
     if (path.includes("reports")) {
       return NextResponse.json(MOCK_REPORTS_SUMMARY);
     }
 
-    // 13. Default fallback response
+    // 15. Default fallback response
     return NextResponse.json({ data: [] }, { status: 200 });
   } catch (err: any) {
     return NextResponse.json(

@@ -25,6 +25,8 @@ export interface User {
   last_name: string;
   employee_id?: string;
   role: string;
+  domain?: string;
+  lotuss_name?: string;
   timezone: string;
   is_active: boolean;
   team_id?: string | null;
@@ -493,6 +495,25 @@ class ApiClient {
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
+  }
+
+  // User & Team Lead Management by Domain
+  async listUsers(domain?: string): Promise<{ data: User[] }> {
+    const query = domain ? `?domain=${encodeURIComponent(domain)}` : "";
+    return this.request<{ data: User[] }>(`/users${query}`);
+  }
+
+  async createTeamLead(data: {
+    email: string;
+    first_name: string;
+    last_name: string;
+    domain: string;
+    lotuss_name?: string;
+  }): Promise<{ data: User }> {
+    return this.request<{ data: User }>("/users/team-lead", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 }
 
