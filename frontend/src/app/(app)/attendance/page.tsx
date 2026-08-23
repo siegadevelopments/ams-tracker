@@ -918,100 +918,27 @@ export default function AttendancePage() {
 
       {/* VIEW FOR NON-LEADERSHIP (REGULAR ENGINEERS / AGENTS) */}
       {!isLeadership ? (
-        <div className="space-y-6">
-          {/* Performance KPI Cards Summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Shifts Logged</p>
-              <p className="text-2xl font-black text-slate-900 mt-2">{MOCK_PERSONAL_ATTENDANCE_HISTORY.length}</p>
-              <p className="text-[11px] text-slate-400 mt-1">August 2026 shifts</p>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">On-Time Clock-Ins</p>
-              <p className="text-2xl font-black text-emerald-600 mt-2">
-                {MOCK_PERSONAL_ATTENDANCE_HISTORY.filter(h => h.late_minutes === 0 && h.status !== "LEAVE").length} / {MOCK_PERSONAL_ATTENDANCE_HISTORY.length}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">80.0% punctuality rate</p>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Late Clock-Ins</p>
-              <p className="text-2xl font-black text-amber-600 mt-2">
-                {MOCK_PERSONAL_ATTENDANCE_HISTORY.filter(h => h.late_minutes > 0).length}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">2 shifts with late remarks</p>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Approved Leave Days</p>
-              <p className="text-2xl font-black text-amber-600 mt-2">1 Day</p>
-              <p className="text-[11px] text-slate-400 mt-1">Vacation leave logged</p>
-            </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-lg mx-auto shadow-xl my-12 animate-fade-in">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 font-extrabold text-xl flex items-center justify-center mx-auto mb-4">
+            🔒
           </div>
-
-          {/* Detailed Attendance History Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
-              <div>
-                <h2 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                  <span>📋</span> Previous Shift Schedules & Clock-In Performance
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Detailed start/end times, shift duty designation, and punctuality remarks
-                </p>
-              </div>
-              <span className="text-xs font-semibold bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-100">
-                {MOCK_PERSONAL_ATTENDANCE_HISTORY.length} Shift Logs
-              </span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-600">
-                <thead className="bg-slate-50 text-slate-700 text-xs uppercase font-semibold border-b border-slate-200">
-                  <tr>
-                    <th className="py-3.5 px-4">Date</th>
-                    <th className="py-3.5 px-4">Assigned Shift</th>
-                    <th className="py-3.5 px-4">Duty Designation</th>
-                    <th className="py-3.5 px-4">Scheduled Hours</th>
-                    <th className="py-3.5 px-4">Actual Start</th>
-                    <th className="py-3.5 px-4">Actual End</th>
-                    <th className="py-3.5 px-4">Duty Status</th>
-                    <th className="py-3.5 px-4">Punctuality Remark</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {MOCK_PERSONAL_ATTENDANCE_HISTORY.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3.5 px-4 text-xs font-bold text-slate-900 whitespace-nowrap">
-                        {item.date}
-                      </td>
-                      <td className="py-3.5 px-4 text-xs font-bold text-blue-600 whitespace-nowrap">
-                        {item.shift_name}
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        {item.duty_role ? <DutyRoleBadge role={item.duty_role} /> : <span className="text-xs text-slate-400">—</span>}
-                      </td>
-                      <td className="py-3.5 px-4 text-xs text-slate-500 font-medium whitespace-nowrap">
-                        {item.scheduled_start} - {item.scheduled_end}
-                      </td>
-                      <td className="py-3.5 px-4 text-xs font-mono font-bold text-slate-900 whitespace-nowrap">
-                        {item.actual_start}
-                      </td>
-                      <td className="py-3.5 px-4 text-xs font-mono font-bold text-slate-900 whitespace-nowrap">
-                        {item.actual_end}
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <StatusBadge status={item.status} />
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <PunctualityRemark lateMinutes={item.late_minutes} overtimeMinutes={item.overtime_minutes} isLeave={item.status === "LEAVE"} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <h2 className="text-lg font-bold text-slate-900 mb-1.5">Attendance Access Restricted</h2>
+          <p className="text-xs text-slate-500 leading-relaxed mb-6">
+            Team Shift Scheduling & Attendance Roster management is restricted strictly to <strong>Team Leads</strong> and the <strong>AMS Head</strong>.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <a
+              href="/my-shift"
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
+            >
+              View My Shift
+            </a>
+            <a
+              href="/dashboard"
+              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all"
+            >
+              Dashboard
+            </a>
           </div>
         </div>
       ) : (
