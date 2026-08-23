@@ -567,18 +567,14 @@ export default function AttendancePage() {
     }
 
     const updatedSchedules = { ...dateSchedules };
-    const startDate = new Date(selectedDate + "T00:00:00");
-    const daysCount = 7; // Auto-plots full week (7 days)
 
+    // Auto-schedule specifically for the active selected week (activeWeekDates)
     scopedMembers.forEach((member, index) => {
-      // Stagger off days per member so shift is covered 24/7 every day
       const off1 = (index * 2) % 7;
       const off2 = (off1 + 1) % 7;
 
-      for (let i = 0; i < daysCount; i++) {
-        const currentDate = new Date(startDate);
-        currentDate.setDate(startDate.getDate() + i);
-        const dateStr = currentDate.toISOString().split("T")[0];
+      activeWeekDates.forEach((dateStr) => {
+        const currentDate = new Date(dateStr + "T00:00:00");
         const dayOfWeek = currentDate.getDay(); // 0 = Sun, 6 = Sat
 
         const isOffDay = dayOfWeek === off1 || dayOfWeek === off2;
@@ -588,12 +584,12 @@ export default function AttendancePage() {
           updatedSchedules[dateStr] = {};
         }
         updatedSchedules[dateStr][member.id] = assignedShiftId;
-      }
+      });
     });
 
     setDateSchedules(updatedSchedules);
     const domainText = isAmsHead ? "Global Roster" : userDomain;
-    setSuccess(`Auto-Scheduled ${scopedMembers.length} member(s) (${domainText}) to ${shiftName} with 24/7 staggered 5:2 coverage starting from ${selectedDate}!`);
+    setSuccess(`Auto-Scheduled ${scopedMembers.length} member(s) (${domainText}) to ${shiftName} for active week (${activeWeekDates[0]} to ${activeWeekDates[6]})!`);
     setTimeout(() => setSuccess(""), 5000);
   };
 
@@ -606,6 +602,7 @@ export default function AttendancePage() {
     const updatedSchedules = { ...dateSchedules };
     const updatedDutyRoles = { ...dutyRoleSchedules };
 
+    // Auto-generate roster strictly for the active selected week (activeWeekDates: Mon - Sun)
     activeWeekDates.forEach((dateStr) => {
       const generated = generateGoogleSheetRosterSchedule(dateStr);
       updatedSchedules[dateStr] = { ...(updatedSchedules[dateStr] || {}), ...generated.schedules };
@@ -616,7 +613,9 @@ export default function AttendancePage() {
     setDutyRoleSchedules(updatedDutyRoles);
     setShowAutoScheduleModal(false);
     const domainText = isAmsHead ? "Global Roster" : userDomain;
-    setSuccess(`Auto-Generated 24/7 Operational Roster for ${scopedMembers.length} member(s) (${domainText}) across Shift 1, Shift 2, and Shift 3 (Nightly) with PIC designations & zero empty shift gaps!`);
+    const weekStart = activeWeekDates[0];
+    const weekEnd = activeWeekDates[6];
+    setSuccess(`Auto-Generated Weekly Roster (${weekStart} to ${weekEnd}) for ${scopedMembers.length} member(s) (${domainText}) with 1 PIC per shift everyday!`);
     setTimeout(() => setSuccess(""), 6000);
   };
 
@@ -646,7 +645,7 @@ export default function AttendancePage() {
                   className="px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition-all flex items-center gap-1.5 cursor-pointer border-r border-blue-500/50"
                   title="Automatically divide team members across Shift 1, Shift 2, and Shift 3"
                 >
-                  <span>⚡ Auto-Schedule (3 Shifts)</span>
+                  <span>⚡ Auto-Generate Active Week</span>
                 </button>
                 <button
                   type="button"
