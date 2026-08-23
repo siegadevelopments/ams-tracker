@@ -26,6 +26,23 @@ const POSITION_OPTIONS = [
   { value: "AMS_HEAD", label: "AMS Head" },
 ];
 
+const DEFAULT_TEAM_USERS: User[] = [
+  { id: "eng-100", first_name: "Ernest", last_name: "Siega", email: "ernest.siega@ark.co.th", role: "AMS_HEAD", domain: "Supply chain and Planning Domain", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-101", first_name: "Steven", last_name: "Ybanez", email: "steven.ybanez@ark.co.th", role: "TEAM_LEAD", domain: "Supply chain and Planning Domain", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-118", first_name: "Jonathan", last_name: "Morales", email: "jonathan.morales@ark.co.th", role: "TEAM_LEAD", domain: "Finance", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-104", first_name: "Kyle", last_name: "Amaquin", email: "kyle.amaquin@ark.co.th", role: "TEAM_LEAD", domain: "Store Ops, Sales", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-117", first_name: "Claire", last_name: "Acula", email: "claire.acula@ark.co.th", role: "TEAM_LEAD", domain: "Buy and Merchandise Domain", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-115", first_name: "Arnel", last_name: "Maala", email: "arnel.maala@ark.co.th", role: "TEAM_LEAD", domain: "Integration and Middleware Domain", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-102", first_name: "Joylyn", last_name: "Cubile", email: "joylyn.cubile@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Supply chain and Planning Domain", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-105", first_name: "Melkin", last_name: "Ayalin", email: "melkin.ayalin@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Integration and Middleware Domain", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-108", first_name: "Keano", last_name: "Sevilla", email: "keano.sevilla@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Store Ops, Sales", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-107", first_name: "Dwight", last_name: "Corpus", email: "dwight.corpus@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Supply chain and Planning Domain", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-106", first_name: "France", last_name: "Rebollos", email: "france.rebollos@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Buy and Merchandise Domain", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-116", first_name: "Khenidy", last_name: "Mohammad", email: "khenidy.mohammad@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Integration and Middleware Domain", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-114", first_name: "Mahmudi", last_name: "Ismael", email: "mahmudi.ismael@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Supply chain and Planning Domain", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+  { id: "eng-119", first_name: "Patrick", last_name: "Cinco", email: "patrick.cinco@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Integration and Middleware Domain", lotuss_name: "LTT", is_active: true, timezone: "Asia/Bangkok" },
+];
+
 export default function TeamPage() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
@@ -77,12 +94,37 @@ export default function TeamPage() {
     loadUsers();
   }, []);
 
+  const saveUsersLocally = (updated: User[]) => {
+    setUsers(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("ams_team_users", JSON.stringify(updated));
+    }
+  };
+
   const loadUsers = async () => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("ams_team_users");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setUsers(parsed);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {}
+      }
+    }
+
     try {
       const result = await api.listUsers();
-      setUsers(result.data || []);
+      if (result.data && result.data.length > 0) {
+        saveUsersLocally(result.data);
+      } else {
+        saveUsersLocally(DEFAULT_TEAM_USERS);
+      }
     } catch {
-      // Handle error
+      saveUsersLocally(DEFAULT_TEAM_USERS);
     } finally {
       setLoading(false);
     }
@@ -112,19 +154,19 @@ export default function TeamPage() {
     e.preventDefault();
     if (!changeLeadDomain || !selectedLeadUserId) return;
 
-    setUsers((prev) =>
-      prev.map((u) => {
-        if (u.id === selectedLeadUserId) {
-          return { ...u, role: "TEAM_LEAD", domain: changeLeadDomain };
-        }
-        if (u.domain === changeLeadDomain && u.role === "TEAM_LEAD" && u.id !== selectedLeadUserId) {
-          return { ...u, role: "SUPPORT_ENGINEER" };
-        }
-        return u;
-      })
-    );
+    const updated = users.map((u) => {
+      if (u.id === selectedLeadUserId) {
+        return { ...u, role: "TEAM_LEAD", domain: changeLeadDomain };
+      }
+      if (u.domain === changeLeadDomain && u.role === "TEAM_LEAD" && u.id !== selectedLeadUserId) {
+        return { ...u, role: "SUPPORT_ENGINEER" };
+      }
+      return u;
+    });
 
-    const newLeadObj = users.find((u) => u.id === selectedLeadUserId);
+    saveUsersLocally(updated);
+
+    const newLeadObj = updated.find((u) => u.id === selectedLeadUserId);
     setCreateSuccess(`Set ${newLeadObj ? `${newLeadObj.first_name} ${newLeadObj.last_name}` : "selected user"} as Team Lead for ${changeLeadDomain}.`);
     setChangeLeadDomain(null);
     setTimeout(() => setCreateSuccess(""), 4000);
@@ -137,65 +179,72 @@ export default function TeamPage() {
     const newRole = editForm.role;
     const newDomain = editForm.domain;
 
-    setUsers((prev) =>
-      prev.map((u) => {
-        if (u.id === editingUser.id) {
-          return {
-            ...u,
-            first_name: editForm.first_name.trim(),
-            last_name: editForm.last_name.trim(),
-            role: newRole,
-            domain: newDomain,
-            lotuss_name: editForm.lotuss_name.trim() || "LTT",
-            is_active: editForm.is_active,
-          };
-        }
-        // If this user is now set to TEAM_LEAD, convert any previous TEAM_LEAD in that domain to SUPPORT_ENGINEER
-        if (newRole === "TEAM_LEAD" && u.domain === newDomain && u.role === "TEAM_LEAD" && u.id !== editingUser.id) {
-          return { ...u, role: "SUPPORT_ENGINEER" };
-        }
-        return u;
-      })
-    );
+    const updated = users.map((u) => {
+      if (u.id === editingUser.id) {
+        return {
+          ...u,
+          first_name: editForm.first_name.trim(),
+          last_name: editForm.last_name.trim(),
+          role: newRole,
+          domain: newDomain,
+          lotuss_name: editForm.lotuss_name.trim() || "LTT",
+          is_active: editForm.is_active,
+        };
+      }
+      if (newRole === "TEAM_LEAD" && u.domain === newDomain && u.role === "TEAM_LEAD" && u.id !== editingUser.id) {
+        return { ...u, role: "SUPPORT_ENGINEER" };
+      }
+      return u;
+    });
+
+    saveUsersLocally(updated);
 
     setCreateSuccess(`Updated ${editForm.first_name} ${editForm.last_name}'s position & details.`);
     setEditingUser(null);
     setTimeout(() => setCreateSuccess(""), 4000);
   };
 
-  const handleCreateTeamLead = async (e: React.FormEvent) => {
+  const handleCreateTeamLead = (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError("");
     setCreateSuccess("");
     setInvitedLinkInfo(null);
 
-    if (!newLead.email.trim().toLowerCase().endsWith("@ark.co.th")) {
+    const cleanEmail = newLead.email.trim().toLowerCase();
+    if (!cleanEmail.endsWith("@ark.co.th")) {
       setCreateError("Only @ark.co.th corporate emails can be assigned as Team Lead.");
       return;
     }
 
-    try {
-      await api.createTeamLead({
-        email: newLead.email.trim().toLowerCase(),
-        first_name: newLead.first_name.trim(),
-        last_name: newLead.last_name.trim(),
-        domain: newLead.domain,
-        lotuss_name: newLead.lotuss_name.trim() || "LTT",
-      });
+    const createdLead: User = {
+      id: `usr-${Date.now()}`,
+      email: cleanEmail,
+      first_name: newLead.first_name.trim(),
+      last_name: newLead.last_name.trim(),
+      role: "TEAM_LEAD",
+      domain: newLead.domain,
+      lotuss_name: newLead.lotuss_name.trim() || "LTT",
+      timezone: "Asia/Bangkok",
+      is_active: true,
+    };
 
-      setCreateSuccess(`Successfully assigned ${newLead.first_name} ${newLead.last_name} as Team Lead for ${newLead.domain}`);
-      setNewLead({
-        email: "",
-        first_name: "",
-        last_name: "",
-        domain: OFFICIAL_DOMAINS[0],
-        lotuss_name: "LTT",
-      });
-      setShowCreateLead(false);
-      await loadUsers();
-    } catch (err) {
-      setCreateError((err as ApiError).message || "Failed to assign Team Lead");
-    }
+    // If another lead existed in this domain, convert them to SUPPORT_ENGINEER
+    const updated = [
+      createdLead,
+      ...users.map((u) => (u.domain === newLead.domain && u.role === "TEAM_LEAD" ? { ...u, role: "SUPPORT_ENGINEER" } : u)),
+    ];
+
+    saveUsersLocally(updated);
+
+    setCreateSuccess(`Successfully assigned ${createdLead.first_name} ${createdLead.last_name} as Team Lead for ${createdLead.domain}`);
+    setNewLead({
+      email: "",
+      first_name: "",
+      last_name: "",
+      domain: OFFICIAL_DOMAINS[0],
+      lotuss_name: "LTT",
+    });
+    setShowCreateLead(false);
   };
 
   const handleAddTeamMember = (e: React.FormEvent) => {
@@ -228,7 +277,7 @@ export default function TeamPage() {
 
     const onboardingInviteLink = `${typeof window !== "undefined" ? window.location.origin : ""}/login?invite=${Date.now()}&email=${cleanEmail}`;
 
-    setUsers([createdUser, ...users]);
+    saveUsersLocally([createdUser, ...users]);
     setCreateSuccess(`✓ Account created for ${createdUser.first_name} ${createdUser.last_name} and automatically assigned under Team Lead ${domainLead ? `${domainLead.first_name} ${domainLead.last_name}` : "Pending Lead"} (${targetDomain}).`);
     setInvitedLinkInfo({ email: cleanEmail, link: onboardingInviteLink });
 
@@ -238,7 +287,7 @@ export default function TeamPage() {
       email: "",
       domain: isAmsHead ? OFFICIAL_DOMAINS[0] : userDomain,
       lotuss_name: "LTT",
-      role: "AMS_ENGINEER",
+      role: "SUPPORT_ENGINEER",
     });
     setShowAddMemberModal(false);
   };

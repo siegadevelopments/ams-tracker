@@ -499,8 +499,24 @@ class ApiClient {
 
   // User & Team Lead Management by Domain
   async listUsers(domain?: string): Promise<{ data: User[] }> {
-    const query = domain ? `?domain=${encodeURIComponent(domain)}` : "";
-    return this.request<{ data: User[] }>(`/users${query}`);
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("ams_team_users");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const filtered = domain ? parsed.filter((u: User) => u.domain === domain) : parsed;
+            return { data: filtered };
+          }
+        } catch (e) {}
+      }
+    }
+    try {
+      const query = domain ? `?domain=${encodeURIComponent(domain)}` : "";
+      return await this.request<{ data: User[] }>(`/users${query}`);
+    } catch {
+      return { data: [] };
+    }
   }
 
   async createTeamLead(data: {
