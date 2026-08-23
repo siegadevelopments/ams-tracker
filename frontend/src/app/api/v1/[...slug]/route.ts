@@ -264,64 +264,7 @@ let currentShiftState: any = {
   late_minutes: 0,
 };
 
-const CLEAN_TICKETS = [
-  {
-    id: "tck-2101115",
-    ticket_number: "#2101115",
-    title: "HO - Please help to monitor for POG Pending : 23 Aug 2026",
-    description: "Planogram pending monitoring for cosmetic sachet items at Lotus's store #04T.",
-    ticket_type: "SERVICE_REQUEST",
-    priority: "P2",
-    status: "IN_PROGRESS",
-    category: "Supply Chain / POG",
-    environment: "PROD",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    assignee_id: "anderson.martin@ark.co.th",
-  },
-  {
-    id: "tck-2098927",
-    ticket_number: "#2098927",
-    title: "BY FnR - Range to Check #12717652",
-    description: "Forecast & Replenishment range validation for commercial merchandise inventory.",
-    ticket_type: "INCIDENT",
-    priority: "P3",
-    status: "OPEN",
-    category: "Buy & Merchandise / FnR",
-    environment: "PROD",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    assignee_id: "shaun.hao@ark.co.th",
-  },
-  {
-    id: "tck-2099410",
-    ticket_number: "#2099410",
-    title: "POS Gateway Timeout at Store #9401 Bangna Branch",
-    description: "Payment gateway response degradation during peak checkout hours. Network logs collected.",
-    ticket_type: "INCIDENT",
-    priority: "P1",
-    status: "IN_PROGRESS",
-    category: "Store Ops / POS",
-    environment: "PROD",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    assignee_id: "arthur.myles@ark.co.th",
-  },
-  {
-    id: "tck-2100522",
-    ticket_number: "#2100522",
-    title: "EDI Purchase Order Ingestion Stalled in Middleware",
-    description: "EDIFACT PO message batch job paused due to schema validation mismatch.",
-    ticket_type: "INCIDENT",
-    priority: "P2",
-    status: "PENDING",
-    category: "Integration & Middleware",
-    environment: "PROD",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    assignee_id: "mohammad.bari@ark.co.th",
-  },
-];
+let CLEAN_TICKETS: any[] = [];
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);

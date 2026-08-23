@@ -24,45 +24,7 @@ interface TakeoverTask {
   notes: string;
 }
 
-const MOCK_TAKEOVER_TASKS: TakeoverTask[] = [
-  {
-    id: "tk-101",
-    ticket_number: "INC-9821",
-    title: "High Memory Utilization on Payment Gateway DB",
-    priority: "P1",
-    domain: "Supply chain and Planning Domain",
-    from_user: "Alex Rivera",
-    from_shift: "Shift 3 (11:00 PM - 8:00 AM)",
-    status: "PENDING_TAKEOVER",
-    created_at: "Today at 07:45 AM",
-    notes: "DB memory peaked at 92%. Flushed temp logs, but connection pool needs monitoring during morning peak.",
-  },
-  {
-    id: "tk-102",
-    ticket_number: "REQ-4402",
-    title: "POS Terminal Connectivity Check for Store Ops",
-    priority: "P3",
-    domain: "Store Ops, Sales",
-    from_user: "Somchai Prasert",
-    from_shift: "Shift 2 (2:00 PM - 11:00 PM)",
-    assigned_to: "Ernest Siega",
-    status: "IN_PROGRESS",
-    created_at: "Today at 06:30 AM",
-    notes: "Bangna branch terminal 4 reconnected. Verify transaction receipts batch job at 10:00 AM.",
-  },
-  {
-    id: "tk-103",
-    ticket_number: "DEP-8812",
-    title: "API Gateway Patch Deployment for Middleware Hub",
-    priority: "P2",
-    domain: "Integration and Middleware Domain",
-    from_user: "Karthik Subramanian",
-    from_shift: "Shift 3 (11:00 PM - 8:00 AM)",
-    status: "PENDING_TAKEOVER",
-    created_at: "Today at 07:10 AM",
-    notes: "Staging build verified. Hotfix ready to trigger on Production Middleware Gateway.",
-  },
-];
+const MOCK_TAKEOVER_TASKS: TakeoverTask[] = [];
 
 function KpiCard({
   label,
