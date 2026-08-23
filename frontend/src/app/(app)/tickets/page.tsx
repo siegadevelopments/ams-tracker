@@ -81,7 +81,7 @@ export default function TicketsPage() {
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [showSlaPolicy, setShowSlaPolicy] = useState(true);
+  const [showSlaPolicy, setShowSlaPolicy] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [error, setError] = useState("");
 
