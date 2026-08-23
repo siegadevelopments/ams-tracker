@@ -831,27 +831,7 @@ export default function AttendancePage() {
         )}
       </div>
 
-      {isLeadership && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-slate-900 text-white p-4 rounded-2xl shadow-md border border-slate-800 gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
-              CAL
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Roster Week</p>
-              <h2 className="text-base font-bold text-white">{formattedSelectedDate}</h2>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-1 rounded-full">
-              Duty Roles: PIC ⭐ | Tech Admin 🛠️ | Support 👤
-            </span>
-            <span className="text-[11px] font-bold bg-blue-600 text-white px-2.5 py-1 rounded-full">
-              {selectedDate === TODAY_DATE_STR ? "TODAY" : "SELECTED DATE"}
-            </span>
-          </div>
-        </div>
-      )}
+
 
       {success && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold flex items-center gap-2 shadow-sm animate-fade-in">
