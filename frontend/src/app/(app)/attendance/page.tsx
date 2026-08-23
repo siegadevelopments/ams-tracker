@@ -55,16 +55,37 @@ const INITIAL_TEAM_MEMBERS: DraggableTeamMember[] = [
   { id: "eng-120", name: "Vryll Atilano", email: "vryll.atilano@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Buy and Merchandise Domain", status: "WORKING", actual_start: "08:00 AM" },
 ];
 
+// 24/7 AMS Shift Roster Generator for any date
+// Ensures 100% 24/7 operational coverage across Shift 1 (Day), Shift 2 (Evening), and Shift 3 (Night)
+const generate247DateSchedule = (dateStr: string): Record<string, string | null> => {
+  const schedule: Record<string, string | null> = {};
+  const dateObj = new Date(dateStr + "T00:00:00");
+  const dayOfWeek = dateObj.getDay(); // 0 = Sun, 1 = Mon ... 6 = Sat
+
+  INITIAL_TEAM_MEMBERS.forEach((m, index) => {
+    // 5-day work / 2-day off pattern per engineer
+    const offDay1 = (index * 2) % 7;
+    const offDay2 = (offDay1 + 1) % 7;
+
+    if (dayOfWeek === offDay1 || dayOfWeek === offDay2) {
+      schedule[m.id] = null; // Off Duty
+    } else {
+      // Rotate working shifts: Shift 1, Shift 2, Shift 3
+      const shiftTypeIndex = (index + Math.floor(dayOfWeek / 2)) % 3;
+      if (shiftTypeIndex === 0) schedule[m.id] = "st-1"; // Shift 1 (08:00 - 17:00)
+      else if (shiftTypeIndex === 1) schedule[m.id] = "st-2"; // Shift 2 (14:00 - 23:00)
+      else schedule[m.id] = "st-3"; // Shift 3 (23:00 - 08:00 24/7 Night Monitoring)
+    }
+  });
+
+  return schedule;
+};
+
 // Initial default schedule mapping for today's date
 const TODAY_DATE_STR = new Date().toISOString().split("T")[0];
 
 const INITIAL_DATE_SCHEDULES: Record<string, Record<string, string | null>> = {
-  [TODAY_DATE_STR]: {
-    "eng-101": null, "eng-102": null, "eng-103": null, "eng-104": null, "eng-105": null,
-    "eng-106": null, "eng-107": null, "eng-108": null, "eng-109": null, "eng-110": null,
-    "eng-111": null, "eng-112": null, "eng-113": null, "eng-114": null, "eng-115": null,
-    "eng-116": null, "eng-117": null, "eng-118": null, "eng-119": null, "eng-120": null,
-  },
+  [TODAY_DATE_STR]: generate247DateSchedule(TODAY_DATE_STR),
 };
 
 const INITIAL_DATE_DUTY_ROLES: Record<string, Record<string, ShiftDutyRole>> = {};
@@ -294,12 +315,13 @@ export default function AttendancePage() {
 
   const activeWeekDates = getWeekDates(selectedDate);
 
-  // Get active shift ID for a member on a specific date
+  // Get active shift ID for a member on a specific date (Generates 24/7 roster if not explicitly set)
   const getMemberShiftForDate = (memberId: string, dateStr: string): string | null => {
     if (dateSchedules[dateStr] && dateSchedules[dateStr][memberId] !== undefined) {
       return dateSchedules[dateStr][memberId];
     }
-    return null;
+    const generated = generate247DateSchedule(dateStr);
+    return generated[memberId] || null;
   };
 
   // Get active shift duty role for a member on a specific date (Defaults to "SUPPORT")
