@@ -253,7 +253,8 @@ export default function AttendancePage() {
   const [showAutoScheduleModal, setShowAutoScheduleModal] = useState(false);
   const [autoScheduleConfig, setAutoScheduleConfig] = useState({
     targetShiftId: "st-1",
-    offDaysPattern: "SAT_SUN",
+    offDay1: 6, // 6 = Saturday
+    offDay2: 0, // 0 = Sunday
     dateRange: "WEEK",
     memberId: "ALL",
   });
@@ -279,7 +280,7 @@ export default function AttendancePage() {
     return "SUPPORT"; // Default is Support
   };
 
-  // Filter members according to domain scoping rules
+  // Filter members according to domain scoping rules (Team Leads only see their domain members)
   const scopedMembers = teamMembers.filter((m) => {
     if (isAmsHead) return true;
     if (!m.domain || !userDomain) return true;
@@ -346,9 +347,9 @@ export default function AttendancePage() {
       }));
 
       if (targetShift) {
-        setSuccess(`✓ Drag & Drop: Plotted ${member.name} to ${targetShift.name} (${targetShift.time}) for ${formattedSelectedDate}. (Default Duty Role: Support)`);
+        setSuccess(`Plotted ${member.name} to ${targetShift.name} (${targetShift.time}) for ${formattedSelectedDate}. (Default Duty Role: Support)`);
       } else {
-        setSuccess(`✓ Moved ${member.name} back to Unassigned Pool for ${formattedSelectedDate}.`);
+        setSuccess(`Moved ${member.name} back to Unassigned Pool for ${formattedSelectedDate}.`);
       }
 
       setTimeout(() => setSuccess(""), 4000);
@@ -363,7 +364,7 @@ export default function AttendancePage() {
         [memberId]: null,
       },
     }));
-    setSuccess(`✓ Removed ${memberName} from ${shiftName} for ${formattedSelectedDate}.`);
+    setSuccess(`Removed ${memberName} from ${shiftName} for ${formattedSelectedDate}.`);
     setTimeout(() => setSuccess(""), 3000);
   };
 
@@ -390,7 +391,7 @@ export default function AttendancePage() {
       : scopedMembers.filter(m => m.id === autoScheduleConfig.memberId);
 
     if (membersToSchedule.length === 0) {
-      setSuccess("No team members selected for auto-scheduling.");
+      setSuccess("No team members available in your domain to auto-schedule.");
       return;
     }
 
@@ -402,15 +403,7 @@ export default function AttendancePage() {
       const dateStr = currentDate.toISOString().split("T")[0];
       const dayOfWeek = currentDate.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
 
-      let isOffDay = false;
-      if (autoScheduleConfig.offDaysPattern === "SAT_SUN") {
-        isOffDay = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
-      } else if (autoScheduleConfig.offDaysPattern === "SUN_MON") {
-        isOffDay = dayOfWeek === 0 || dayOfWeek === 1; // Sunday or Monday
-      } else if (autoScheduleConfig.offDaysPattern === "FRI_SAT") {
-        isOffDay = dayOfWeek === 5 || dayOfWeek === 6; // Friday or Saturday
-      }
-
+      const isOffDay = dayOfWeek === Number(autoScheduleConfig.offDay1) || dayOfWeek === Number(autoScheduleConfig.offDay2);
       const assignedShiftId = isOffDay ? "st-5" : autoScheduleConfig.targetShiftId;
 
       if (!updatedSchedules[dateStr]) {
@@ -425,7 +418,8 @@ export default function AttendancePage() {
     setDateSchedules(updatedSchedules);
     setShowAutoScheduleModal(false);
     const targetShiftName = SHIFT_OPTIONS.find(s => s.id === autoScheduleConfig.targetShiftId)?.name || "Shift";
-    setSuccess(`Auto-Scheduled ${membersToSchedule.length} member(s) to ${targetShiftName} (5 days work / 2 days off) starting from ${selectedDate} for ${daysCount} days.`);
+    const domainText = isAmsHead ? "Global Domains" : userDomain;
+    setSuccess(`Auto-Scheduled ${membersToSchedule.length} member(s) under ${domainText} to ${targetShiftName} (5 days work / 2 days off) starting from ${selectedDate} for ${daysCount} days.`);
     setTimeout(() => setSuccess(""), 5000);
   };
 
@@ -894,7 +888,7 @@ export default function AttendancePage() {
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <div>
                 <h3 className="font-bold text-slate-900 text-base">Auto-Schedule 5:2 Shift Roster</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Automatically plot 5 working days & 2 days off for team members</p>
+                <p className="text-xs text-slate-500 mt-0.5">Plot 5 working days & 2 custom days off for team members</p>
               </div>
               <button
                 type="button"
@@ -906,14 +900,21 @@ export default function AttendancePage() {
             </div>
 
             <form onSubmit={handleExecuteAutoSchedule} className="space-y-4">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-center justify-between">
+                <span className="font-bold uppercase text-[10px] tracking-wider text-blue-700">Domain Scope</span>
+                <span className="font-extrabold text-blue-950">{isAmsHead ? "Global (All Domains)" : userDomain}</span>
+              </div>
+
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Target Team Member(s)</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Target Team Member(s) {!isAmsHead && `(${userDomain} Only)`}
+                </label>
                 <select
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-900 bg-white"
                   value={autoScheduleConfig.memberId}
                   onChange={(e) => setAutoScheduleConfig({ ...autoScheduleConfig, memberId: e.target.value })}
                 >
-                  <option value="ALL">All Team Members ({scopedMembers.length} Members)</option>
+                  <option value="ALL">All Domain Members ({scopedMembers.length} Members)</option>
                   {scopedMembers.map((m) => (
                     <option key={m.id} value={m.id}>{m.name} ({m.role.replace("_", " ")})</option>
                   ))}
@@ -934,35 +935,57 @@ export default function AttendancePage() {
                 </select>
               </div>
 
+              {/* FLEXIBLE CUSTOM 2 DAYS OFF SELECTORS */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">2 Days Off Pattern</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">First Off Day</label>
                   <select
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-900 bg-white"
-                    value={autoScheduleConfig.offDaysPattern}
-                    onChange={(e) => setAutoScheduleConfig({ ...autoScheduleConfig, offDaysPattern: e.target.value })}
+                    value={autoScheduleConfig.offDay1}
+                    onChange={(e) => setAutoScheduleConfig({ ...autoScheduleConfig, offDay1: Number(e.target.value) })}
                   >
-                    <option value="SAT_SUN">Saturday & Sunday Off</option>
-                    <option value="SUN_MON">Sunday & Monday Off</option>
-                    <option value="FRI_SAT">Friday & Saturday Off</option>
+                    <option value={6}>Saturday</option>
+                    <option value={0}>Sunday</option>
+                    <option value={1}>Monday</option>
+                    <option value={2}>Tuesday</option>
+                    <option value={3}>Wednesday</option>
+                    <option value={4}>Thursday</option>
+                    <option value={5}>Friday</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Duration Range</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Second Off Day</label>
                   <select
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-900 bg-white"
-                    value={autoScheduleConfig.dateRange}
-                    onChange={(e) => setAutoScheduleConfig({ ...autoScheduleConfig, dateRange: e.target.value })}
+                    value={autoScheduleConfig.offDay2}
+                    onChange={(e) => setAutoScheduleConfig({ ...autoScheduleConfig, offDay2: Number(e.target.value) })}
                   >
-                    <option value="WEEK">Current Week (7 Days)</option>
-                    <option value="MONTH">Full Month (30 Days)</option>
+                    <option value={0}>Sunday</option>
+                    <option value={1}>Monday</option>
+                    <option value={2}>Tuesday</option>
+                    <option value={3}>Wednesday</option>
+                    <option value={4}>Thursday</option>
+                    <option value={5}>Friday</option>
+                    <option value={6}>Saturday</option>
                   </select>
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Duration Range</label>
+                <select
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-900 bg-white"
+                  value={autoScheduleConfig.dateRange}
+                  onChange={(e) => setAutoScheduleConfig({ ...autoScheduleConfig, dateRange: e.target.value })}
+                >
+                  <option value="WEEK">Current Week (7 Days)</option>
+                  <option value="MONTH">Full Month (30 Days)</option>
+                </select>
+              </div>
+
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 leading-relaxed">
-                Starting from date: <strong className="text-slate-900">{selectedDate}</strong>. Assigns 5 working days on the target shift and 2 days on Leave/Rest Day automatically.
+                Starting from date: <strong className="text-slate-900">{selectedDate}</strong>. Assigns 5 working days on the target shift and 2 custom days off automatically.
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
