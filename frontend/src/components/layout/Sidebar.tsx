@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * Sidebar navigation component.
+ * Sidebar navigation component with PWA "Install AMS App" installation prompter.
  * Role-aware navigation, clean layout with zero overlapping UI elements.
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
@@ -31,8 +31,38 @@ const navItems: NavItem[] = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  // Default to collapsed on mobile screen width
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // PWA Installation State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [canInstallPwa, setCanInstallPwa] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setCanInstallPwa(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallPwa = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setCanInstallPwa(false);
+      }
+      setDeferredPrompt(null);
+    } else {
+      alert("To install AMS Tracker on your device:\n\n• On Chrome/Edge: Click the Install icon in the address bar.\n• On iOS (Safari): Tap Share ➔ 'Add to Home Screen'.\n• On Android: Tap Menu ➔ 'Install App'.");
+    }
+  };
 
   const userRole = user?.role || "";
 
@@ -46,7 +76,7 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Top Header Bar (renders cleanly in flow on small screens) */}
+      {/* Mobile Top Header Bar */}
       <header className="md:hidden flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 text-white w-full sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <button
@@ -63,12 +93,16 @@ export default function Sidebar() {
             <p className="text-[10px] text-slate-400 mt-0.5">SLA Platform</p>
           </div>
         </div>
-        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-          {user?.first_name?.[0]}{user?.last_name?.[0]}
-        </div>
+
+        <button
+          onClick={handleInstallPwa}
+          className="px-2.5 py-1 text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+        >
+          <span>📲</span> Install App
+        </button>
       </header>
 
-      {/* Sidebar Drawer (Mobile Overlay + Fixed Desktop) */}
+      {/* Sidebar Drawer */}
       <aside
         className={`fixed md:sticky top-0 left-0 h-screen z-40 transition-transform duration-200 shrink-0
           ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
@@ -155,6 +189,16 @@ export default function Sidebar() {
                 </ul>
               </>
             )}
+
+            {/* PWA INSTALLATION BUTTON */}
+            <div className="px-3 pt-6">
+              <button
+                onClick={handleInstallPwa}
+                className="w-full py-2.5 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>📲</span> Install AMS Tracker App
+              </button>
+            </div>
           </nav>
 
           {/* User Profile Footer */}
