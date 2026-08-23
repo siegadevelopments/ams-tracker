@@ -45,6 +45,7 @@ async def init_db() -> None:
 
             # 2. Seed Default Admin Users if missing
             admin_emails = [
+                ("ernest.siega@ark.co.th", "Ernest Siega", "ADMIN-SA-001"),
                 ("admin@gmail.com", "Gmail Admin", "ADMIN-000"),
                 ("siegadevelopments@gmail.com", "Siega Admin", "ADMIN-002"),
                 ("admin@lotuss.com", "System Administrator", "ADMIN-001"),
