@@ -224,33 +224,18 @@ export default function LoginPage() {
                 </span>
               </button>
 
-              {/* Account 2: Siega Admin */}
+              {/* Account 2: AMS Manager */}
               <button
                 type="button"
-                onClick={() => performLoginWithEmail("siegadevelopments@gmail.com")}
+                onClick={() => performLoginWithEmail("manager@ark.co.th")}
                 className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left group"
               >
                 <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                  SD
+                  AM
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-900 truncate">Siega Developments</p>
-                  <p className="text-xs text-slate-500 truncate">siegadevelopments@gmail.com</p>
-                </div>
-              </button>
-
-              {/* Account 3: Gmail Admin */}
-              <button
-                type="button"
-                onClick={() => performLoginWithEmail("admin@gmail.com")}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left group"
-              >
-                <div className="w-10 h-10 rounded-full bg-amber-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                  GA
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-900 truncate">Gmail Admin</p>
-                  <p className="text-xs text-slate-500 truncate">admin@gmail.com</p>
+                  <p className="text-xs font-bold text-slate-900 truncate">AMS Operations Manager</p>
+                  <p className="text-xs text-slate-500 truncate">manager@ark.co.th</p>
                 </div>
               </button>
             </div>
@@ -262,13 +247,18 @@ export default function LoginPage() {
                 onClick={() => setShowCustomInput(true)}
                 className="w-full text-center text-xs font-semibold text-blue-600 hover:text-blue-700 py-2 rounded-lg transition-colors border border-dashed border-blue-200 hover:bg-blue-50/30"
               >
-                + Use another Google account
+                + Use another @ark.co.th account
               </button>
             ) : (
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (customGoogleEmail.trim()) {
+                    if (!customGoogleEmail.trim().toLowerCase().endsWith("@ark.co.th")) {
+                      setError("Only @ark.co.th corporate emails are permitted to sign in.");
+                      setShowGoogleModal(false);
+                      return;
+                    }
                     performLoginWithEmail(customGoogleEmail);
                   }
                 }}
@@ -277,7 +267,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-                  placeholder="Enter any @gmail.com or @ark.co.th email"
+                  placeholder="user@ark.co.th"
                   value={customGoogleEmail}
                   onChange={(e) => setCustomGoogleEmail(e.target.value)}
                   required

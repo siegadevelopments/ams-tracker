@@ -188,6 +188,23 @@ async function handleApiRequest(request: NextRequest, context: any) {
 
     // 2. Auth Login endpoint
     if (path.includes("login") && method === "POST") {
+      let email = "";
+      try {
+        const body = await request.json();
+        email = (body?.email || "").trim().toLowerCase();
+      } catch {
+        // Ignore json parse error
+      }
+
+      // Strictly restrict access to @ark.co.th domain
+      if (email && !email.endsWith("@ark.co.th")) {
+        return NextResponse.json(
+          { error: { code: "FORBIDDEN_DOMAIN", message: "Access restricted: Only @ark.co.th corporate emails are permitted to sign in." } },
+          { status: 403 }
+        );
+      }
+
+      const userEmail = email || "ernest.siega@ark.co.th";
       const mockToken =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDEiLCJlbWFpbCI6ImVybmVzdC5zaWVnYUBhcmsuY28udGgiLCJyb2xlIjoiU1VQRVJfQURNSU4iLCJleHAiOjE5OTk5OTk5OTl9.demo_signature";
 
@@ -196,6 +213,7 @@ async function handleApiRequest(request: NextRequest, context: any) {
         refresh_token: mockToken,
         token_type: "bearer",
         expires_in: 3600,
+        user: { ...DEMO_USER, email: userEmail },
       });
     }
 
