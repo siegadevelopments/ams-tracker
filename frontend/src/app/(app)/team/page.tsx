@@ -88,8 +88,11 @@ export default function TeamPage() {
     }
   };
 
+  const [changeLeadDomain, setChangeLeadDomain] = useState<string | null>(null);
+  const [selectedLeadUserId, setSelectedLeadUserId] = useState<string>("");
+
   const getLeadForDomain = (domName: string) => {
-    return users.find((u) => u.domain === domName && (u.role === "TEAM_LEAD" || u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" || u.role === "AMS_MANAGER"));
+    return users.find((u) => u.domain === domName && u.role === "TEAM_LEAD");
   };
 
   const handleOpenEditModal = (targetUser: User) => {
@@ -105,31 +108,59 @@ export default function TeamPage() {
     setCreateError("");
   };
 
+  const handleConfirmChangeLead = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!changeLeadDomain || !selectedLeadUserId) return;
+
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === selectedLeadUserId) {
+          return { ...u, role: "TEAM_LEAD", domain: changeLeadDomain };
+        }
+        if (u.domain === changeLeadDomain && u.role === "TEAM_LEAD" && u.id !== selectedLeadUserId) {
+          return { ...u, role: "SUPPORT_ENGINEER" };
+        }
+        return u;
+      })
+    );
+
+    const newLeadObj = users.find((u) => u.id === selectedLeadUserId);
+    setCreateSuccess(`Set ${newLeadObj ? `${newLeadObj.first_name} ${newLeadObj.last_name}` : "selected user"} as Team Lead for ${changeLeadDomain}.`);
+    setChangeLeadDomain(null);
+    setTimeout(() => setCreateSuccess(""), 4000);
+  };
+
   const handleSaveEditUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
 
-    const domainLead = getLeadForDomain(editForm.domain);
+    const newRole = editForm.role;
+    const newDomain = editForm.domain;
 
     setUsers((prev) =>
-      prev.map((u) =>
-        u.id === editingUser.id
-          ? {
-              ...u,
-              first_name: editForm.first_name.trim(),
-              last_name: editForm.last_name.trim(),
-              role: editForm.role,
-              domain: editForm.domain,
-              lotuss_name: editForm.lotuss_name.trim() || "LTT",
-              is_active: editForm.is_active,
-              team_id: domainLead ? domainLead.id : u.team_id,
-            }
-          : u
-      )
+      prev.map((u) => {
+        if (u.id === editingUser.id) {
+          return {
+            ...u,
+            first_name: editForm.first_name.trim(),
+            last_name: editForm.last_name.trim(),
+            role: newRole,
+            domain: newDomain,
+            lotuss_name: editForm.lotuss_name.trim() || "LTT",
+            is_active: editForm.is_active,
+          };
+        }
+        // If this user is now set to TEAM_LEAD, convert any previous TEAM_LEAD in that domain to SUPPORT_ENGINEER
+        if (newRole === "TEAM_LEAD" && u.domain === newDomain && u.role === "TEAM_LEAD" && u.id !== editingUser.id) {
+          return { ...u, role: "SUPPORT_ENGINEER" };
+        }
+        return u;
+      })
     );
 
-    setCreateSuccess(`✓ Successfully updated ${editForm.first_name} ${editForm.last_name}'s position & details (Assigned under Team Lead ${domainLead ? `${domainLead.first_name} ${domainLead.last_name}` : "Pending Lead"}).`);
+    setCreateSuccess(`Updated ${editForm.first_name} ${editForm.last_name}'s position & details.`);
     setEditingUser(null);
+    setTimeout(() => setCreateSuccess(""), 4000);
   };
 
   const handleCreateTeamLead = async (e: React.FormEvent) => {
@@ -636,7 +667,7 @@ export default function TeamPage() {
       {/* Domain Leadership Grid Summary */}
       <div>
         <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <span>🏛️</span> {isAmsHead ? "Domain Team Lead Overview" : `My Domain Leadership — ${userDomain}`}
+          {isAmsHead ? "Domain Team Lead Overview" : `My Domain Leadership — ${userDomain}`}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {visibleDomains.map((domName) => {
@@ -666,7 +697,7 @@ export default function TeamPage() {
                         <p className="text-[11px] text-slate-500 truncate">{lead.email}</p>
                         {lead.lotuss_name && (
                           <p className="text-[10px] text-blue-600 font-semibold mt-0.5 truncate">
-                            🏢 {lead.lotuss_name}
+                            {lead.lotuss_name}
                           </p>
                         )}
                       </div>
@@ -681,16 +712,10 @@ export default function TeamPage() {
                 {isAmsHead && (
                   <button
                     onClick={() => {
-                      setNewLead({
-                        email: "",
-                        first_name: "",
-                        last_name: "",
-                        domain: domName,
-                        lotuss_name: "LTT",
-                      });
-                      setShowCreateLead(true);
+                      setChangeLeadDomain(domName);
+                      setSelectedLeadUserId(lead ? lead.id : "");
                     }}
-                    className="mt-4 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 py-2 rounded-lg transition-colors border border-dashed border-blue-200 text-center w-full"
+                    className="mt-4 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 py-2 rounded-lg transition-colors border border-dashed border-blue-200 text-center w-full cursor-pointer"
                   >
                     {lead ? "Change Team Lead" : "+ Assign Team Lead"}
                   </button>
@@ -700,6 +725,66 @@ export default function TeamPage() {
           })}
         </div>
       </div>
+
+      {/* CHANGE TEAM LEAD MODAL */}
+      {changeLeadDomain && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-100 relative">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Assign Team Lead</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{changeLeadDomain}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setChangeLeadDomain(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmChangeLead} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Select Team Lead</label>
+                <select
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-900 bg-white"
+                  value={selectedLeadUserId}
+                  onChange={(e) => setSelectedLeadUserId(e.target.value)}
+                  required
+                >
+                  <option value="">-- Select Member --</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.first_name} {u.last_name} ({u.email}) — {u.domain}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 leading-relaxed">
+                Designating a member as Team Lead will automatically update their position role to <strong>Team Lead</strong> for <strong>{changeLeadDomain}</strong>.
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setChangeLeadDomain(null)}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                >
+                  Confirm Assignment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Directory of Members and Team Leads */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
