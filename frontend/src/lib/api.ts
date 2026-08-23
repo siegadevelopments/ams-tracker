@@ -229,8 +229,9 @@ class ApiClient {
   }
 
   getBaseUrl(): string {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
+    const envUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (envUrl && envUrl !== "NEXT_PUBLIC_API_URL" && (envUrl.startsWith("http") || envUrl.startsWith("/"))) {
+      return envUrl;
     }
     if (typeof window !== "undefined") {
       const hostname = window.location.hostname;
