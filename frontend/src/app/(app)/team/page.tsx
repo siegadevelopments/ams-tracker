@@ -242,18 +242,9 @@ export default function TeamPage() {
           {canAddMember && (
             <button
               onClick={() => { setShowAddMemberModal(true); setCreateError(""); setCreateSuccess(""); }}
-              className="btn btn-primary shadow-sm flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-2"
             >
-              <span>👤</span> + Add Team Member & Invite
-            </button>
-          )}
-
-          {isAmsHead && (
-            <button
-              onClick={() => { setShowCreateLead(!showCreateLead); setCreateError(""); setCreateSuccess(""); }}
-              className="btn btn-outline shadow-sm flex items-center gap-2"
-            >
-              <span>+ Assign Team Lead</span>
+              <span>+ Add Team Member & Invite</span>
             </button>
           )}
         </div>
