@@ -18,6 +18,19 @@ const DEMO_USER = {
   is_active: true,
 };
 
+let currentShiftState: any = {
+  id: "att-001",
+  user_id: DEMO_USER.id,
+  user_name: "Ernest Siega",
+  status: "WORKING",
+  attendance_date: "2026-08-23",
+  scheduled_start_utc: "2026-08-23T06:00:00Z",
+  scheduled_end_utc: "2026-08-23T14:00:00Z",
+  actual_start_utc: "2026-08-23T06:01:00Z",
+  actual_end_utc: null,
+  late_minutes: 0,
+};
+
 const MOCK_TEAM_STATUS = {
   data: {
     total_members: 6,
@@ -110,20 +123,6 @@ const MOCK_TICKETS = {
   size: 20,
 };
 
-const MOCK_ATTENDANCE_CURRENT = {
-  data: {
-    id: "att-001",
-    user_id: DEMO_USER.id,
-    user_name: "Ernest Siega",
-    status: "WORKING",
-    attendance_date: "2026-08-23",
-    scheduled_start_utc: "2026-08-23T06:00:00Z",
-    scheduled_end_utc: "2026-08-23T14:00:00Z",
-    actual_start_utc: "2026-08-23T06:01:00Z",
-    late_minutes: 0,
-  },
-};
-
 const MOCK_SHIFT_TYPES = {
   data: [
     {
@@ -188,7 +187,37 @@ async function handleApiRequest(request: NextRequest, context: any) {
       });
     }
 
-    // 2. Auth Login endpoint
+    // 2. End Shift Action
+    if (path.includes("end-shift") || path.endsWith("end-shift")) {
+      currentShiftState = {
+        ...currentShiftState,
+        status: "OFF_DUTY",
+        actual_end_utc: new Date().toISOString(),
+      };
+      return NextResponse.json({ data: currentShiftState });
+    }
+
+    // 3. Start Shift Action
+    if (path.includes("start-shift") || path.endsWith("start-shift")) {
+      currentShiftState = {
+        ...currentShiftState,
+        status: "WORKING",
+        actual_start_utc: new Date().toISOString(),
+        actual_end_utc: null,
+      };
+      return NextResponse.json({ data: currentShiftState });
+    }
+
+    // 4. Break Actions (start-break / end-break)
+    if (path.includes("break")) {
+      currentShiftState = {
+        ...currentShiftState,
+        status: path.includes("start") ? "ON_BREAK" : "WORKING",
+      };
+      return NextResponse.json({ data: currentShiftState });
+    }
+
+    // 5. Auth Login endpoint
     if (path.includes("login") && method === "POST") {
       let email = "";
       try {
@@ -198,7 +227,6 @@ async function handleApiRequest(request: NextRequest, context: any) {
         // Ignore json parse error
       }
 
-      // Strictly restrict access to @ark.co.th domain
       if (email && !email.endsWith("@ark.co.th")) {
         return NextResponse.json(
           { error: { code: "FORBIDDEN_DOMAIN", message: "Access restricted: Only @ark.co.th corporate emails are permitted to sign in." } },
@@ -219,7 +247,7 @@ async function handleApiRequest(request: NextRequest, context: any) {
       });
     }
 
-    // 2b. Auth Register endpoint (/auth/register)
+    // 6. Auth Register endpoint (/auth/register)
     if (path.includes("register") && method === "POST") {
       let email = "";
       let firstName = "";
@@ -274,65 +302,37 @@ async function handleApiRequest(request: NextRequest, context: any) {
       });
     }
 
-    // 3. Current User profile endpoint (/auth/me)
+    // 7. Current User profile endpoint (/auth/me)
     if (path.includes("me")) {
       return NextResponse.json(DEMO_USER);
     }
 
-    // 4. Team Status (/attendance/team-status)
+    // 8. Team Status (/attendance/team-status)
     if (path.includes("team-status")) {
       return NextResponse.json(MOCK_TEAM_STATUS);
     }
 
-    // 5. Shift Lifecycle Endpoints (/attendance/end-shift, /attendance/start-shift, etc.)
-    if (path.includes("end-shift")) {
-      const endedRecord = {
-        ...MOCK_ATTENDANCE_CURRENT.data,
-        status: "OFF_DUTY",
-        actual_end_utc: new Date().toISOString(),
-      };
-      return NextResponse.json({ data: endedRecord });
-    }
-
-    if (path.includes("start-shift")) {
-      const startedRecord = {
-        ...MOCK_ATTENDANCE_CURRENT.data,
-        status: "WORKING",
-        actual_start_utc: new Date().toISOString(),
-        actual_end_utc: null,
-      };
-      return NextResponse.json({ data: startedRecord });
-    }
-
-    if (path.includes("break")) {
-      const breakRecord = {
-        ...MOCK_ATTENDANCE_CURRENT.data,
-        status: path.includes("start") ? "ON_BREAK" : "WORKING",
-      };
-      return NextResponse.json({ data: breakRecord });
-    }
-
-    // 6. Current Attendance (/attendance/current)
+    // 9. Current Attendance (/attendance/current)
     if (path.includes("attendance/current") || path === "attendance") {
-      return NextResponse.json(MOCK_ATTENDANCE_CURRENT);
+      return NextResponse.json({ data: currentShiftState });
     }
 
-    // 7. Shift Types (/shifts/types)
+    // 10. Shift Types (/shifts/types)
     if (path.includes("shifts/types") || path.includes("shift-types") || path === "shifts/types") {
       return NextResponse.json(MOCK_SHIFT_TYPES);
     }
 
-    // 7. Tickets (/tickets)
+    // 11. Tickets (/tickets)
     if (path.includes("tickets")) {
       return NextResponse.json(MOCK_TICKETS);
     }
 
-    // 8. Reports (/reports)
+    // 12. Reports (/reports)
     if (path.includes("reports")) {
       return NextResponse.json(MOCK_REPORTS_SUMMARY);
     }
 
-    // 9. Default fallback response
+    // 13. Default fallback response
     return NextResponse.json({ data: [] }, { status: 200 });
   } catch (err: any) {
     return NextResponse.json(
