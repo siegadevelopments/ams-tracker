@@ -415,7 +415,7 @@ export default function AttendancePage() {
       const dayOfWeek = currentDate.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
 
       const isOffDay = dayOfWeek === Number(autoScheduleConfig.offDay1) || dayOfWeek === Number(autoScheduleConfig.offDay2);
-      const assignedShiftId = isOffDay ? "st-5" : autoScheduleConfig.targetShiftId;
+      const assignedShiftId = isOffDay ? null : autoScheduleConfig.targetShiftId;
 
       if (!updatedSchedules[dateStr]) {
         updatedSchedules[dateStr] = {};
@@ -430,7 +430,7 @@ export default function AttendancePage() {
     setShowAutoScheduleModal(false);
     const targetShiftName = SHIFT_OPTIONS.find(s => s.id === autoScheduleConfig.targetShiftId)?.name || "Shift";
     const domainText = isAmsHead ? "Global Domains" : userDomain;
-    setSuccess(`Auto-Scheduled ${membersToSchedule.length} member(s) under ${domainText} to ${targetShiftName} (5 days work / 2 days off) starting from ${selectedDate} for ${daysCount} days.`);
+    setSuccess(`Auto-Scheduled ${membersToSchedule.length} member(s) under ${domainText} to ${targetShiftName} (5 days work / 2 rest days) starting from ${selectedDate} for ${daysCount} days.`);
     setTimeout(() => setSuccess(""), 5000);
   };
 
@@ -452,7 +452,7 @@ export default function AttendancePage() {
         const dayOfWeek = currentDate.getDay(); // 0 = Sun, 6 = Sat
 
         const isOffDay = dayOfWeek === 6 || dayOfWeek === 0;
-        const assignedShiftId = isOffDay ? "st-5" : targetShiftId;
+        const assignedShiftId = isOffDay ? null : targetShiftId;
 
         if (!updatedSchedules[dateStr]) {
           updatedSchedules[dateStr] = {};
@@ -463,7 +463,7 @@ export default function AttendancePage() {
 
     setDateSchedules(updatedSchedules);
     const domainText = isAmsHead ? "Global Roster" : userDomain;
-    setSuccess(`Auto-Scheduled ${scopedMembers.length} member(s) (${domainText}) to ${shiftName} (5:2 work/off policy) starting from ${selectedDate}!`);
+    setSuccess(`Auto-Scheduled ${scopedMembers.length} member(s) (${domainText}) to ${shiftName} (5 days work / 2 rest days) starting from ${selectedDate}!`);
     setTimeout(() => setSuccess(""), 5000);
   };
 
@@ -504,7 +504,7 @@ export default function AttendancePage() {
         const dayOfWeek = currentDate.getDay(); // 0..6
 
         const isOffDay = dayOfWeek === offPattern.off1 || dayOfWeek === offPattern.off2;
-        const assignedShiftId = isOffDay ? "st-5" : targetShiftId;
+        const assignedShiftId = isOffDay ? null : targetShiftId;
 
         if (!updatedSchedules[dateStr]) {
           updatedSchedules[dateStr] = {};
