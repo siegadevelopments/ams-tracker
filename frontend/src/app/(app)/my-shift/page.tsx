@@ -20,6 +20,7 @@ export default function MyShiftPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [activityLoading, setActivityLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   const [newActivity, setNewActivity] = useState({
     activity_type: "INCIDENT",
@@ -82,7 +83,7 @@ export default function MyShiftPage() {
   };
 
   const handleEndShift = async () => {
-    if (!confirm("Are you sure you want to end your shift?")) return;
+    setShowEndConfirm(false);
     setActionLoading(true);
     setError("");
     try {
@@ -296,13 +297,34 @@ export default function MyShiftPage() {
                 </form>
               </div>
 
-              <button
-                onClick={handleEndShift}
-                disabled={actionLoading}
-                className="btn btn-danger btn-lg w-full mt-6"
-              >
-                {actionLoading ? "Ending..." : "⏹ End Shift"}
-              </button>
+              {showEndConfirm ? (
+                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl text-center space-y-3">
+                  <p className="text-sm font-semibold text-red-900">Are you sure you want to end your shift?</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleEndShift}
+                      disabled={actionLoading}
+                      className="btn btn-danger flex-1 py-2 text-sm"
+                    >
+                      {actionLoading ? "Ending..." : "Yes, End Shift"}
+                    </button>
+                    <button
+                      onClick={() => setShowEndConfirm(false)}
+                      className="btn btn-secondary flex-1 py-2 text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowEndConfirm(true)}
+                  disabled={actionLoading}
+                  className="btn btn-danger btn-lg w-full mt-6"
+                >
+                  ⏹ End Shift
+                </button>
+              )}
             </div>
           )}
 
