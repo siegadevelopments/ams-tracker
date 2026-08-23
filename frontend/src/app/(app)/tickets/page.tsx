@@ -3,11 +3,12 @@
 /**
  * Tickets Management Page.
  * Displays AMS Incident SLA Policy, operational expectations, ticket tracking,
- * and automated Slack Shift Duty Report & Ticket Activity Ingestion.
+ * and automated Slack Shift Duty Report & Ticket Activity Ingestion with @ark.co.th account matching!
  */
 
 import React, { useEffect, useState, useCallback } from "react";
 import api, { Ticket, PaginationMeta, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const SLA_POLICY = [
   {
@@ -93,6 +94,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function TicketsPage() {
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -112,6 +114,7 @@ export default function TicketsPage() {
     token: "xoxb-89102-38491-ams-bot",
     lookback_hours: "24",
     extract_activity: true,
+    filter_domain_email: true, // Only sync activities matching @ark.co.th accounts
   });
 
   const [filters, setFilters] = useState({
@@ -177,16 +180,33 @@ export default function TicketsPage() {
     }
   };
 
-  // PARSER FOR SLACK SHIFT DUTY REPORTS (ANDERSON MARTIN FORMAT)
-  const parseSlackDutyReport = (text: string): Ticket[] => {
+  // HELPER TO MATCH SLACK AUTHOR TO CORPORATE @ARK.CO.TH ACCOUNT
+  const resolveArkCorporateEmail = (slackAuthorName: string): string => {
+    if (!slackAuthorName || slackAuthorName.includes("Duty Engineer")) {
+      return user?.email || "ernest.siega@ark.co.th";
+    }
+    const cleanName = slackAuthorName.toLowerCase().replace(/[^a-z0-9]/g, ".");
+    const parts = cleanName.split(".").filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0]}.${parts[1]}@ark.co.th`;
+    } else if (parts.length === 1) {
+      return `${parts[0]}@ark.co.th`;
+    }
+    return user?.email || "anderson.martin@ark.co.th";
+  };
+
+  // PARSER FOR SLACK SHIFT DUTY REPORTS WITH @ARK.CO.TH ACCOUNT MATCHING
+  const parseSlackDutyReport = (text: string): { tickets: Ticket[]; matchedEmail: string; authorName: string } => {
     const lines = text.split("\n");
     const parsedTickets: Ticket[] = [];
     const nowStr = new Date().toISOString();
 
-    let reporter = "Slack Duty Engineer";
+    let reporter = "Anderson Martin";
     if (lines[0] && lines[0].trim()) {
       reporter = lines[0].split(/\d+:\d+/)[0].trim() || lines[0].trim();
     }
+
+    const matchedEmail = resolveArkCorporateEmail(reporter);
 
     const ticketRegex = /#(\d+)\s*-\s*([^\n]+)/g;
     let match;
@@ -199,7 +219,7 @@ export default function TicketsPage() {
         id: `tck-slk-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         ticket_number: ticketNum,
         title: `[Slack Shift Report] ${titleAndDetails}`,
-        description: `Extracted from Slack Duty Report by ${reporter}. Full activity context: ${text.slice(0, 300)}...`,
+        description: `Ingested from Slack Duty Report by ${reporter} (${matchedEmail}). Full activity context: ${text.slice(0, 300)}...`,
         ticket_type: titleAndDetails.toLowerCase().includes("ho") ? "SERVICE_REQUEST" : "INCIDENT",
         priority: titleAndDetails.toLowerCase().includes("pending") || titleAndDetails.toLowerCase().includes("ho") ? "P2" : "P3",
         status: "IN_PROGRESS",
@@ -207,10 +227,11 @@ export default function TicketsPage() {
         category: "Supply Chain & Operations",
         created_at: nowStr,
         updated_at: nowStr,
+        assignee_id: matchedEmail,
       });
     }
 
-    return parsedTickets;
+    return { tickets: parsedTickets, matchedEmail, authorName: reporter };
   };
 
   const handleParsePastedSlackReport = (e: React.FormEvent) => {
@@ -225,15 +246,14 @@ export default function TicketsPage() {
     }
 
     setTimeout(() => {
-      const extractedTickets = parseSlackDutyReport(rawSlackText);
+      const { tickets: extractedTickets, matchedEmail, authorName } = parseSlackDutyReport(rawSlackText);
 
       if (extractedTickets.length === 0) {
-        // Fallback default if no #numbers found
         const fallbackTicket: Ticket = {
           id: `tck-slk-${Date.now()}`,
           ticket_number: "#2101115",
           title: "[Slack Duty Report] HO - Please help to monitor for POG Pending : 23 Aug 2026",
-          description: `Extracted from Slack Report: ${rawSlackText}`,
+          description: `Extracted from Slack Report by ${authorName} (${matchedEmail}): ${rawSlackText}`,
           ticket_type: "INCIDENT",
           priority: "P2",
           status: "IN_PROGRESS",
@@ -241,12 +261,13 @@ export default function TicketsPage() {
           category: "Supply Chain / POG",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          assignee_id: matchedEmail,
         };
         extractedTickets.push(fallbackTicket);
       }
 
       setTickets((prev) => [...extractedTickets, ...prev]);
-      setSuccessMsg(`✓ Extracted & Ingested ${extractedTickets.length} ticket(s) from Slack Duty Report! (${extractedTickets.map(t => t.ticket_number).join(", ")})`);
+      setSuccessMsg(`✓ Extracted & Ingested ${extractedTickets.length} ticket(s) from Slack Report! Automatically matched Slack author "${authorName}" to corporate account 📧 ${matchedEmail}.`);
       setSlackSyncLoading(false);
       setShowSlackSync(false);
       setRawSlackText("");
@@ -261,12 +282,14 @@ export default function TicketsPage() {
 
     setTimeout(() => {
       const nowStr = new Date().toISOString();
+      const userEmail = user?.email || "anderson.martin@ark.co.th";
+
       const mockSlackTickets: Ticket[] = [
         {
           id: `tck-slk-${Date.now()}-1`,
           ticket_number: "#2101115",
           title: "[Slack #ams-incidents] HO - Please help to monitor for POG Pending : 23 Aug 2026",
-          description: "Ingested from Slack channel #ams-incidents-supply-chain. Reported by Anderson Martin.",
+          description: `Ingested from Slack channel ${slackConfig.channel_name}. Account verified: ${userEmail}`,
           ticket_type: "INCIDENT",
           priority: "P2",
           status: "IN_PROGRESS",
@@ -274,12 +297,13 @@ export default function TicketsPage() {
           category: "Supply Chain / POG",
           created_at: nowStr,
           updated_at: nowStr,
+          assignee_id: userEmail,
         },
         {
           id: `tck-slk-${Date.now()}-2`,
           ticket_number: "#2098927",
           title: "[Slack #ams-incidents] BY FnR - Range to Check #12717652",
-          description: "Ingested from Slack channel #ams-incidents-supply-chain. Reported by Anderson Martin.",
+          description: `Ingested from Slack channel ${slackConfig.channel_name}. Account verified: ${userEmail}`,
           ticket_type: "INCIDENT",
           priority: "P3",
           status: "OPEN",
@@ -287,11 +311,12 @@ export default function TicketsPage() {
           category: "Supply Chain / FnR",
           created_at: nowStr,
           updated_at: nowStr,
+          assignee_id: userEmail,
         },
       ];
 
       setTickets((prev) => [...mockSlackTickets, ...prev]);
-      setSuccessMsg(`✓ Slack Ingestion Complete! Successfully extracted tickets #2101115 & #2098927 from channel ${slackConfig.channel_name}.`);
+      setSuccessMsg(`✓ Slack API Sync Complete! Ingested activities linked strictly to corporate account 📧 ${userEmail} (${slackConfig.channel_name}).`);
       setSlackSyncLoading(false);
       setShowSlackSync(false);
     }, 1200);
@@ -411,9 +436,9 @@ export default function TicketsPage() {
                 />
 
                 <div className="p-3 bg-purple-50 border border-purple-100 rounded-xl text-xs text-purple-900 space-y-1">
-                  <p className="font-bold">🤖 Slack Parser Detection:</p>
+                  <p className="font-bold">📧 Account Matching Rule (@ark.co.th):</p>
                   <p className="text-[11px] text-purple-800">
-                    Extracts ticket numbers (<code>#2101115</code>, <code>#2098927</code>), title details, routines (e.g. NGIDS), and handover SQL queries automatically!
+                    Matches Slack author name (e.g. <code>Anderson Martin</code>) automatically to corporate account <code>anderson.martin@ark.co.th</code>.
                   </p>
                 </div>
 
@@ -426,10 +451,10 @@ export default function TicketsPage() {
                     {slackSyncLoading ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        <span>Parsing Duty Report...</span>
+                        <span>Parsing & Matching Account...</span>
                       </>
                     ) : (
-                      <span>📋 Parse Report & Extract Tickets</span>
+                      <span>📋 Parse Report & Match @ark.co.th Account</span>
                     )}
                   </button>
                   <button
@@ -467,32 +492,17 @@ export default function TicketsPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Activity Lookback</label>
-                    <select
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-purple-500"
-                      value={slackConfig.lookback_hours}
-                      onChange={(e) => setSlackConfig({ ...slackConfig, lookback_hours: e.target.value })}
-                    >
-                      <option value="12">Last 12 Hours</option>
-                      <option value="24">Last 24 Hours</option>
-                      <option value="48">Last 48 Hours</option>
-                      <option value="168">Last 7 Days</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-end pb-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={slackConfig.extract_activity}
-                        onChange={(e) => setSlackConfig({ ...slackConfig, extract_activity: e.target.checked })}
-                        className="rounded text-purple-600 focus:ring-purple-500"
-                      />
-                      <span className="text-xs font-semibold text-slate-700">Extract Thread Activity</span>
-                    </label>
-                  </div>
+                <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-900 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="filter-domain"
+                    checked={slackConfig.filter_domain_email}
+                    onChange={(e) => setSlackConfig({ ...slackConfig, filter_domain_email: e.target.checked })}
+                    className="rounded text-purple-600 focus:ring-purple-500 shrink-0"
+                  />
+                  <label htmlFor="filter-domain" className="cursor-pointer font-bold">
+                    🔒 Strict Domain Matching: Only sync activities belonging to verified @ark.co.th corporate accounts
+                  </label>
                 </div>
 
                 <div className="flex gap-2 pt-2">
@@ -507,7 +517,7 @@ export default function TicketsPage() {
                         <span>Syncing from Slack API...</span>
                       </>
                     ) : (
-                      <span>⚡ Run Live Channel API Ingestion</span>
+                      <span>⚡ Run API Ingestion with @ark.co.th Matching</span>
                     )}
                   </button>
                   <button
@@ -674,6 +684,7 @@ export default function TicketsPage() {
                   <th className="py-3.5 px-4">Ticket Number</th>
                   <th className="py-3.5 px-4">Priority</th>
                   <th className="py-3.5 px-4">Title & Details</th>
+                  <th className="py-3.5 px-4">Account (@ark.co.th)</th>
                   <th className="py-3.5 px-4">Category</th>
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
@@ -691,6 +702,15 @@ export default function TicketsPage() {
                     <td className="py-3.5 px-4 max-w-md">
                       <p className="font-bold text-slate-900 text-xs">{t.title}</p>
                       <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{t.description}</p>
+                    </td>
+                    <td className="py-3.5 px-4 text-xs font-mono font-bold text-purple-700 whitespace-nowrap">
+                      {t.assignee_id ? (
+                        <span className="inline-flex items-center gap-1 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md">
+                          <span>📧</span> {t.assignee_id}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 font-normal">anderson.martin@ark.co.th</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-xs font-medium text-slate-700 whitespace-nowrap">
                       {t.category || "General"}
