@@ -254,7 +254,8 @@ export default function AttendancePage() {
   const [draggedMemberId, setDraggedMemberId] = useState<string | null>(null);
   const [dragOverShiftId, setDragOverShiftId] = useState<string | null>(null);
   const [success, setSuccess] = useState("");
-  const [viewMode, setViewMode] = useState<"dragdrop" | "table">("dragdrop");
+  const [viewMode, setViewMode] = useState<"calendar" | "dragdrop" | "table">("calendar");
+  const [quickAssignCell, setQuickAssignCell] = useState<{ memberId: string; memberName: string; dateStr: string } | null>(null);
 
   // Selected Date State
   const [selectedDate, setSelectedDate] = useState<string>(TODAY_DATE_STR);
@@ -275,20 +276,48 @@ export default function AttendancePage() {
   const isAmsHead = userRole === "AMS_HEAD" || userRole === "SUPER_ADMIN";
   const userDomain = (user as any)?.domain || "Supply chain and Planning Domain";
 
-  // Get active shift ID for a member on the selected date
-  const getMemberShiftForSelectedDate = (memberId: string): string | null => {
-    if (dateSchedules[selectedDate] && dateSchedules[selectedDate][memberId] !== undefined) {
-      return dateSchedules[selectedDate][memberId];
+  // Compute active week dates starting from Monday
+  const getWeekDates = (dateStr: string) => {
+    const curr = new Date(dateStr + "T00:00:00");
+    const day = curr.getDay(); // 0 = Sun, 1 = Mon ...
+    const diffToMon = curr.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(curr.setDate(diffToMon));
+
+    const week: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const next = new Date(monday);
+      next.setDate(monday.getDate() + i);
+      week.push(next.toISOString().split("T")[0]);
+    }
+    return week;
+  };
+
+  const activeWeekDates = getWeekDates(selectedDate);
+
+  // Get active shift ID for a member on a specific date
+  const getMemberShiftForDate = (memberId: string, dateStr: string): string | null => {
+    if (dateSchedules[dateStr] && dateSchedules[dateStr][memberId] !== undefined) {
+      return dateSchedules[dateStr][memberId];
     }
     return null;
   };
 
+  // Get active shift duty role for a member on a specific date (Defaults to "SUPPORT")
+  const getMemberDutyRoleForDate = (memberId: string, dateStr: string): ShiftDutyRole => {
+    if (dutyRoleSchedules[dateStr] && dutyRoleSchedules[dateStr][memberId]) {
+      return dutyRoleSchedules[dateStr][memberId];
+    }
+    return "SUPPORT";
+  };
+
+  // Get active shift ID for a member on the selected date
+  const getMemberShiftForSelectedDate = (memberId: string): string | null => {
+    return getMemberShiftForDate(memberId, selectedDate);
+  };
+
   // Get active shift duty role for a member on the selected date (Defaults to "SUPPORT")
   const getMemberDutyRoleForSelectedDate = (memberId: string): ShiftDutyRole => {
-    if (dutyRoleSchedules[selectedDate] && dutyRoleSchedules[selectedDate][memberId]) {
-      return dutyRoleSchedules[selectedDate][memberId];
-    }
-    return "SUPPORT"; // Default is Support
+    return getMemberDutyRoleForDate(memberId, selectedDate);
   };
 
   // Filter members according to domain scoping rules (Team Leads only see their domain members)
@@ -390,6 +419,35 @@ export default function AttendancePage() {
 
     const roleLabel = newRole === "PIC" ? "PIC" : newRole === "TECHNICAL_ADMIN" ? "Technical Admin" : "Support";
     setSuccess(`Designated ${memberName} as ${roleLabel} for ${formattedSelectedDate}.`);
+    setTimeout(() => setSuccess(""), 3000);
+  };
+
+  const handleAssignMemberToDateShift = (memberId: string, targetShiftId: string | null, dateStr: string, memberName: string, shiftName: string) => {
+    setDateSchedules((prev) => ({
+      ...prev,
+      [dateStr]: {
+        ...(prev[dateStr] || {}),
+        [memberId]: targetShiftId,
+      },
+    }));
+    if (targetShiftId) {
+      setSuccess(`Assigned ${memberName} to ${shiftName} for ${dateStr}.`);
+    } else {
+      setSuccess(`Set ${memberName} to Off Duty for ${dateStr}.`);
+    }
+    setTimeout(() => setSuccess(""), 3000);
+  };
+
+  const handleSetMemberDutyRoleForDate = (memberId: string, newRole: ShiftDutyRole, dateStr: string, memberName: string) => {
+    setDutyRoleSchedules((prev) => ({
+      ...prev,
+      [dateStr]: {
+        ...(prev[dateStr] || {}),
+        [memberId]: newRole,
+      },
+    }));
+    const roleLabel = newRole === "PIC" ? "PIC" : newRole === "TECHNICAL_ADMIN" ? "Technical Admin" : "Support";
+    setSuccess(`Designated ${memberName} as ${roleLabel} for ${dateStr}.`);
     setTimeout(() => setSuccess(""), 3000);
   };
 
@@ -650,21 +708,30 @@ export default function AttendancePage() {
             <div className="flex bg-slate-100 p-1 rounded-xl">
               <button
                 type="button"
-                onClick={() => setViewMode("dragdrop")}
+                onClick={() => setViewMode("calendar")}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  viewMode === "dragdrop" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500"
+                  viewMode === "calendar" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
-                Drag & Drop Board
+                📅 Calendar View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("dragdrop")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  viewMode === "dragdrop" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                🎴 Shift Board
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("table")}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  viewMode === "table" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500"
+                  viewMode === "table" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
-                Roster Table View
+                📋 Roster Table
               </button>
             </div>
           </div>
@@ -678,13 +745,13 @@ export default function AttendancePage() {
               CAL
             </div>
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Scheduling Date</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Roster Week</p>
               <h2 className="text-base font-bold text-white">{formattedSelectedDate}</h2>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-bold bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-1 rounded-full">
-              Duty Roles: PIC | Tech Admin | Support
+              Duty Roles: PIC ⭐ | Tech Admin 🛠️ | Support 👤
             </span>
             <span className="text-[11px] font-bold bg-blue-600 text-white px-2.5 py-1 rounded-full">
               {selectedDate === TODAY_DATE_STR ? "TODAY" : "SELECTED DATE"}
@@ -697,6 +764,155 @@ export default function AttendancePage() {
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold flex items-center gap-2 shadow-sm animate-fade-in">
           <span>✓</span>
           <span>{success}</span>
+        </div>
+      )}
+
+      {/* 📅 INTERACTIVE WEEKLY CALENDAR ROSTER MATRIX */}
+      {isLeadership && viewMode === "calendar" && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden animate-fade-in">
+          {/* Calendar Top Banner */}
+          <div className="p-5 bg-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📅</span>
+                <h2 className="text-lg font-black text-white">Weekly Shift Schedule Calendar</h2>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Interactive shift matrix for {isAmsHead ? "Global AMS Roster" : userDomain}. Click any day cell to assign or update duty roles.
+              </p>
+            </div>
+
+            {/* Shift Color Legend */}
+            <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
+              <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Shift 1 (08-17)
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+                <span className="w-2.5 h-2.5 rounded-full bg-sky-400"></span> Shift 2 (14-23)
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-400"></span> Shift 3 (23-08)
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Leave
+              </div>
+            </div>
+          </div>
+
+          {/* Calendar Matrix Grid Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[950px]">
+              <thead>
+                <tr className="bg-slate-100/90 border-b border-slate-200 text-xs font-bold text-slate-700">
+                  <th className="py-3.5 px-4 w-64 border-r border-slate-200 sticky left-0 bg-slate-100 z-10">Team Member & Domain</th>
+                  {activeWeekDates.map((dateStr) => {
+                    const dateObj = new Date(dateStr + "T00:00:00");
+                    const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
+                    const monthDay = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    const isToday = dateStr === TODAY_DATE_STR;
+                    const isSelected = dateStr === selectedDate;
+
+                    return (
+                      <th
+                        key={dateStr}
+                        onClick={() => setSelectedDate(dateStr)}
+                        className={`py-3.5 px-3 text-center border-r border-slate-200 cursor-pointer transition-colors ${
+                          isSelected
+                            ? "bg-blue-600 text-white"
+                            : isToday
+                            ? "bg-blue-50 text-blue-800"
+                            : "hover:bg-slate-200/60"
+                        }`}
+                      >
+                        <div className="font-extrabold uppercase text-[11px] tracking-wide">{dayName}</div>
+                        <div className={`text-xs mt-0.5 font-bold ${isSelected ? "text-blue-100" : "text-slate-500"}`}>{monthDay}</div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-xs">
+                {scopedMembers.map((member) => (
+                  <tr key={member.id} className="hover:bg-slate-50/80 transition-colors">
+                    {/* Member Details */}
+                    <td className="py-3 px-4 border-r border-slate-200 bg-slate-50/50 sticky left-0 z-10 shadow-xs">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                          {member.name.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 truncate leading-tight">{member.name}</p>
+                          <p className="text-[10px] text-slate-500 truncate mt-0.5">{member.role.replace("_", " ")}</p>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* 7 Days Matrix Cells */}
+                    {activeWeekDates.map((dateStr) => {
+                      const shiftId = getMemberShiftForDate(member.id, dateStr);
+                      const dutyRole = getMemberDutyRoleForDate(member.id, dateStr);
+                      const isSelectedDateCell = dateStr === selectedDate;
+                      const shiftObj = SHIFT_OPTIONS.find((s) => s.id === shiftId);
+
+                      return (
+                        <td
+                          key={dateStr}
+                          onClick={() => {
+                            setQuickAssignCell({ memberId: member.id, memberName: member.name, dateStr });
+                          }}
+                          className={`p-2.5 border-r border-slate-200 text-center align-middle transition-all cursor-pointer hover:bg-blue-50/60 relative group ${
+                            isSelectedDateCell ? "bg-blue-50/20" : ""
+                          }`}
+                        >
+                          {shiftObj ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <span
+                                className={`w-full py-1.5 px-2 rounded-xl font-extrabold text-[10px] shadow-xs flex items-center justify-center gap-1 transition-transform group-hover:scale-105 ${
+                                  shiftObj.id === "st-1"
+                                    ? "bg-blue-600 text-white"
+                                    : shiftObj.id === "st-2"
+                                    ? "bg-sky-500 text-white"
+                                    : shiftObj.id === "st-3"
+                                    ? "bg-indigo-600 text-white"
+                                    : shiftObj.id === "st-4"
+                                    ? "bg-purple-600 text-white"
+                                    : "bg-amber-500 text-white"
+                                }`}
+                              >
+                                {shiftObj.id === "st-1" && "🌅"}
+                                {shiftObj.id === "st-2" && "🌆"}
+                                {shiftObj.id === "st-3" && "🌙"}
+                                {shiftObj.id === "st-4" && "📚"}
+                                {shiftObj.id === "st-5" && "🏖️"}
+                                <span>{shiftObj.name}</span>
+                              </span>
+
+                              {/* Duty Role Designation Tag */}
+                              {dutyRole !== "SUPPORT" ? (
+                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                                  dutyRole === "PIC" ? "bg-purple-100 text-purple-900 border border-purple-300" : "bg-sky-100 text-sky-900 border border-sky-300"
+                                }`}>
+                                  {dutyRole === "PIC" ? "⭐ PIC" : "🛠️ Admin"}
+                                </span>
+                              ) : (
+                                <span className="text-[9px] text-slate-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                                  Support
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="py-2.5 rounded-xl border border-dashed border-slate-200 group-hover:border-blue-400 text-[10px] text-slate-400 group-hover:text-blue-600 font-bold transition-all">
+                              💤 Off Duty
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -1168,6 +1384,95 @@ export default function AttendancePage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ⚡ QUICK CELL SHIFT ASSIGNMENT MODAL */}
+      {quickAssignCell && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-100 relative">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">{quickAssignCell.memberName}</h3>
+                <p className="text-xs text-slate-500 font-medium">📅 Date: {quickAssignCell.dateStr}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickAssignCell(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Select Shift Schedule</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {SHIFT_OPTIONS.map((shift) => (
+                    <button
+                      key={shift.id}
+                      type="button"
+                      onClick={() => {
+                        handleAssignMemberToDateShift(quickAssignCell.memberId, shift.id, quickAssignCell.dateStr, quickAssignCell.memberName, shift.name);
+                        setQuickAssignCell(null);
+                      }}
+                      className="w-full py-2.5 px-3.5 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-left transition-all flex items-center justify-between cursor-pointer"
+                    >
+                      <span className="text-xs font-bold text-slate-900">{shift.name}</span>
+                      <span className="text-[10px] text-slate-500 font-medium">{shift.hours}</span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleAssignMemberToDateShift(quickAssignCell.memberId, null, quickAssignCell.dateStr, quickAssignCell.memberName, "Off Duty");
+                      setQuickAssignCell(null);
+                    }}
+                    className="w-full py-2.5 px-3.5 rounded-xl border border-dashed border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold text-center cursor-pointer transition-all"
+                  >
+                    💤 Set Off Duty (Unassign)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Assign Duty Designation</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSetMemberDutyRoleForDate(quickAssignCell.memberId, "SUPPORT", quickAssignCell.dateStr, quickAssignCell.memberName);
+                      setQuickAssignCell(null);
+                    }}
+                    className="flex-1 py-2 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl cursor-pointer"
+                  >
+                    Support
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSetMemberDutyRoleForDate(quickAssignCell.memberId, "PIC", quickAssignCell.dateStr, quickAssignCell.memberName);
+                      setQuickAssignCell(null);
+                    }}
+                    className="flex-1 py-2 text-xs font-bold bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-xl cursor-pointer"
+                  >
+                    ⭐ PIC
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSetMemberDutyRoleForDate(quickAssignCell.memberId, "TECHNICAL_ADMIN", quickAssignCell.dateStr, quickAssignCell.memberName);
+                      setQuickAssignCell(null);
+                    }}
+                    className="flex-1 py-2 text-xs font-bold bg-sky-100 hover:bg-sky-200 text-sky-800 rounded-xl cursor-pointer"
+                  >
+                    🛠️ Tech Admin
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
