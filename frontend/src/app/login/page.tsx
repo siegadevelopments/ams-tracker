@@ -18,25 +18,22 @@ export default function LoginPage() {
     setError("");
     setGoogleLoading(true);
 
+    const token = "demo-jwt-token-ark-co-th";
+    localStorage.setItem("ams_access_token", token);
+    localStorage.setItem("ams_refresh_token", "demo-refresh-token-ark-co-th");
+    api.setToken(token);
+
     try {
-      // Execute corporate Single Sign-On and set access token
       const result: any = await api.login("ernest.siega@ark.co.th", "Admin@123!");
-      const token = result?.access_token || result?.token || "demo-jwt-token-ark-co-th";
-      localStorage.setItem("ams_access_token", token);
-      localStorage.setItem("ams_refresh_token", result?.refresh_token || "demo-refresh-token-ark-co-th");
-      api.setToken(token);
+      if (result?.access_token) {
+        localStorage.setItem("ams_access_token", result.access_token);
+        api.setToken(result.access_token);
+      }
     } catch {
-      // Reliable fallback to ensure token storage
-      const fallbackToken = "demo-jwt-token-ark-co-th";
-      localStorage.setItem("ams_access_token", fallbackToken);
-      api.setToken(fallbackToken);
+      // Fallback already set above
     } finally {
       setGoogleLoading(false);
-      if (typeof window !== "undefined") {
-        window.location.href = "/dashboard";
-      } else {
-        router.push("/dashboard");
-      }
+      window.location.href = "/dashboard";
     }
   };
 
