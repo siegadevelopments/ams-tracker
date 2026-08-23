@@ -23,6 +23,16 @@ class Settings(BaseSettings):
         description="PostgreSQL connection string (async driver)",
     )
 
+    @property
+    def async_database_url(self) -> str:
+        """Ensure the URL uses postgresql+asyncpg scheme for SQLAlchemy async engine."""
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            return url.replace("postgres://", "postgresql+asyncpg://", 1)
+        if url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
+            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
+
     # Authentication
     SECRET_KEY: str = Field(
         default="CHANGE-ME-IN-PRODUCTION-use-openssl-rand-hex-32",
