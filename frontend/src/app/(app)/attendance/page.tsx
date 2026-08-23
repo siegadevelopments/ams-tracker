@@ -1033,41 +1033,53 @@ export default function AttendancePage() {
             </table>
           </div>
 
-          {/* UNASSIGNED ENGINEERS POOL & DRAG DRAWER */}
+          {/* OFF-DUTY & REST DAYS POOL DRAWER */}
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOverCell(null); }}
             onDrop={(e) => handleCalendarDrop(e, null, selectedDate)}
             className="p-5 bg-slate-50 border-t border-slate-200 space-y-3"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <h3 className="font-extrabold text-slate-800 text-xs flex items-center gap-1.5">
-                <span>👥</span> Unassigned / Off Duty Pool for {formattedSelectedDate}
+                <span>💤</span> Off-Duty & Rest Days Pool ({formattedSelectedDate})
               </h3>
               <span className="text-[10px] text-slate-500 font-medium">
-                Drag any engineer card directly onto a shift cell in the calendar above!
+                Team Leads on Weekend Off or Engineers on 5:2 Rest Days. Drag to override shift.
               </span>
             </div>
 
             <div className="flex flex-wrap gap-2 min-h-[40px]">
               {scopedMembers
                 .filter((m) => getMemberShiftForDate(m.id, selectedDate) === null)
-                .map((member) => (
-                  <div
-                    key={member.id}
-                    draggable={isLeadership}
-                    onDragStart={(e) => handleCalendarDragStart(e, member.id, selectedDate)}
-                    className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 shadow-xs hover:border-blue-500 hover:bg-blue-50 cursor-grab active:cursor-grabbing flex items-center gap-1.5 transition-all"
-                  >
-                    <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 text-[9px] font-bold flex items-center justify-center">
-                      {member.name.charAt(0)}
-                    </span>
-                    <span>{member.name}</span>
-                    <span className="text-[9px] text-slate-400">💤 Off</span>
-                  </div>
-                ))}
+                .map((member) => {
+                  const isTL = member.role === "TEAM_LEAD";
+                  const isHead = member.role === "AMS_HEAD";
+                  return (
+                    <div
+                      key={member.id}
+                      draggable={isLeadership}
+                      onDragStart={(e) => handleCalendarDragStart(e, member.id, selectedDate)}
+                      className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 shadow-xs hover:border-blue-500 hover:bg-blue-50 cursor-grab active:cursor-grabbing flex items-center gap-1.5 transition-all"
+                    >
+                      <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 text-[9px] font-bold flex items-center justify-center">
+                        {member.name.charAt(0)}
+                      </span>
+                      <span>{member.name}</span>
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${
+                        isHead
+                          ? "bg-slate-100 text-slate-600"
+                          : isTL
+                          ? "bg-blue-50 text-blue-700 border border-blue-100"
+                          : "bg-amber-50 text-amber-800 border border-amber-100"
+                      }`}>
+                        {isHead ? "👔 Management" : isTL ? "🏖️ TL Weekend Off" : "💤 5:2 Rest Day"}
+                      </span>
+                    </div>
+                  );
+                })}
 
               {scopedMembers.filter((m) => getMemberShiftForDate(m.id, selectedDate) === null).length === 0 && (
-                <span className="text-xs text-slate-400 italic">All engineers are assigned on {formattedSelectedDate}.</span>
+                <span className="text-xs text-slate-400 italic">All engineers are actively working on {formattedSelectedDate}.</span>
               )}
             </div>
           </div>
