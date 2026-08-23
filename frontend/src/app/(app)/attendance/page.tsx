@@ -33,6 +33,7 @@ interface DraggableTeamMember {
 }
 
 const INITIAL_TEAM_MEMBERS: DraggableTeamMember[] = [
+  { id: "eng-100", name: "Ernest Siega", email: "ernest.siega@ark.co.th", role: "AMS_HEAD", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
   { id: "eng-101", name: "TL Steven Ybanez", email: "steven.ybanez@ark.co.th", role: "TEAM_LEAD", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
   { id: "eng-118", name: "TL Jonathan Morales", email: "jonathan.morales@ark.co.th", role: "TEAM_LEAD", domain: "Finance", status: "WORKING", actual_start: "08:00 AM" },
   { id: "eng-104", name: "TL Kyle Amaquin", email: "kyle.amaquin@ark.co.th", role: "TEAM_LEAD", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
@@ -49,7 +50,7 @@ const INITIAL_TEAM_MEMBERS: DraggableTeamMember[] = [
 ];
 
 // 24/7 Operational Google Sheet Roster Schedule Generator
-// Guarantees zero empty shift gaps across Shift 1 (08-17), Shift 2 (14-23), and Shift 3 (Nightly 23-08)
+// Excludes AMS Head from scheduling & ensures STRICTLY 1 PIC per shift everyday
 const generateGoogleSheetRosterSchedule = (dateStr: string): { schedules: Record<string, string | null>; roles: Record<string, ShiftDutyRole> } => {
   const schedules: Record<string, string | null> = {};
   const roles: Record<string, ShiftDutyRole> = {};
@@ -59,17 +60,25 @@ const generateGoogleSheetRosterSchedule = (dateStr: string): { schedules: Record
   const dayNumber = dateObj.getDate();
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-  // ALL Team Leads (TLs): Mon-Fri Shift 1 (Day Shift 08:00 - 17:00), Sat-Sun OFF
-  const teamLeads = INITIAL_TEAM_MEMBERS.filter((m) => m.role === "TEAM_LEAD" || m.name.startsWith("TL "));
-  const engineers = INITIAL_TEAM_MEMBERS.filter((m) => m.role !== "TEAM_LEAD" && !m.name.startsWith("TL "));
+  // 1. AMS Head: Excluded from shift scheduling (null)
+  const amsHeads = INITIAL_TEAM_MEMBERS.filter((m) => m.role === "AMS_HEAD" || m.name.includes("Ernest Siega"));
+  amsHeads.forEach((head) => {
+    schedules[head.id] = null;
+    roles[head.id] = "SUPPORT";
+  });
 
+  // 2. Team Leads (TLs): Mon-Fri Shift 1 (Day Shift 08:00 - 17:00), Sat-Sun OFF
+  const teamLeads = INITIAL_TEAM_MEMBERS.filter((m) => (m.role === "TEAM_LEAD" || m.name.startsWith("TL ")) && !amsHeads.some((h) => h.id === m.id));
   teamLeads.forEach((tl) => {
     schedules[tl.id] = isWeekend ? null : "st-1";
     roles[tl.id] = "SUPPORT";
   });
 
+  // 3. Support Engineers: 24/7 Zero-Gaps Staggered Roster
+  const engineers = INITIAL_TEAM_MEMBERS.filter((m) => !amsHeads.some((h) => h.id === m.id) && !teamLeads.some((t) => t.id === m.id));
+
   engineers.forEach((m, idx) => {
-    // Specific leave days from sheet
+    // Specific leave days from Google Sheet sample
     if ((m.id === "eng-107" && (dayNumber === 8 || dayNumber === 9)) || (m.id === "eng-117" && (dayNumber === 26 || dayNumber === 27))) {
       schedules[m.id] = "st-5"; // Leave
       roles[m.id] = "SUPPORT";
@@ -77,29 +86,37 @@ const generateGoogleSheetRosterSchedule = (dateStr: string): { schedules: Record
     }
 
     const group = idx % 3;
-    const isPic = (dayNumber + idx) % 3 === 0;
-
     if (group === 0) {
-      // Shift 1 (Day Shift 08:00 - 17:00)
+      // Shift 1
       const off1 = (idx * 2) % 7;
       const off2 = (off1 + 1) % 7;
       const isOff = dayOfWeek === off1 || dayOfWeek === off2;
       schedules[m.id] = isOff ? null : "st-1";
-      roles[m.id] = isPic && !isOff ? "PIC" : "SUPPORT";
     } else if (group === 1) {
-      // Shift 2 (Evening Shift 14:00 - 23:00)
+      // Shift 2
       const off1 = ((idx + 1) * 2) % 7;
       const off2 = (off1 + 1) % 7;
       const isOff = dayOfWeek === off1 || dayOfWeek === off2;
       schedules[m.id] = isOff ? null : "st-2";
-      roles[m.id] = isPic && !isOff ? "PIC" : "SUPPORT";
     } else {
-      // Shift 3 (Nightly 23:00 - 08:00 24/7 Night Monitoring)
+      // Shift 3 (Nightly)
       const off1 = ((idx + 2) * 2) % 7;
       const off2 = (off1 + 1) % 7;
       const isOff = dayOfWeek === off1 || dayOfWeek === off2;
       schedules[m.id] = isOff ? null : "st-3";
-      roles[m.id] = isPic && !isOff ? "PIC" : "SUPPORT";
+    }
+    roles[m.id] = "SUPPORT"; // Default to SUPPORT
+  });
+
+  // 4. GUARANTEE STRICTLY 1 PIC PER SHIFT EVERY DAY
+  ["st-1", "st-2", "st-3"].forEach((shiftId) => {
+    // Find all active on-duty members for this shift on dateStr
+    const activeShiftMembers = INITIAL_TEAM_MEMBERS.filter((m) => schedules[m.id] === shiftId);
+    if (activeShiftMembers.length > 0) {
+      // Pick deterministic PIC for this shift on this day
+      const picIndex = (dayNumber + shiftId.charCodeAt(3)) % activeShiftMembers.length;
+      const picMember = activeShiftMembers[picIndex];
+      roles[picMember.id] = "PIC";
     }
   });
 
