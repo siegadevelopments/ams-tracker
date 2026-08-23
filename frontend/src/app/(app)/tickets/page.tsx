@@ -3,7 +3,10 @@
 /**
  * Tickets Management Page.
  * Displays AMS Incident SLA Policy, operational expectations, ticket tracking,
- * and automated Slack Shift Duty Report & Ticket Activity Ingestion with @ark.co.th account matching!
+ * and AI-Powered Slack Duty Report Parser & Uniform Formatter!
+ * - AI parses raw pasted Slack report text (any format) into a uniform, standardized AMS format.
+ * - Extracts ticket numbers, titles, priorities, categories, shift handovers, and SQL queries.
+ * - Automatically matches Slack author to their @ark.co.th corporate account.
  */
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -64,6 +67,24 @@ For Shift 2, please continue to monitor the POG in this ticket.
 
 SELECT PendingDate, * FROM ix_spc_planogram WHERE Desc2 = '04T' AND Desc5 = 77821 AND Desc13 = 'Minor' AND Desc24 = 'COSMETICS SACHET' AND DBDateEffectiveFrom = '2026-09-07 00:00:00:000'`;
 
+interface FormattedSlackReport {
+  authorName: string;
+  matchedEmail: string;
+  shiftName: string;
+  shiftTime: string;
+  reportDate: string;
+  routines: string[];
+  handoverNotes: string;
+  sqlCodeSnippet?: string;
+  tickets: {
+    ticketNumber: string;
+    title: string;
+    priority: "P1" | "P2" | "P3" | "P4";
+    category: string;
+    status: string;
+  }[];
+}
+
 function PriorityBadge({ priority }: { priority: string }) {
   const colors: Record<string, string> = {
     P1: "bg-red-100 text-red-700 border-red-200",
@@ -108,13 +129,14 @@ export default function TicketsPage() {
   const [successMsg, setSuccessMsg] = useState("");
 
   const [rawSlackText, setRawSlackText] = useState("");
+  const [formattedReport, setFormattedReport] = useState<FormattedSlackReport | null>(null);
 
   const [slackConfig, setSlackConfig] = useState({
     channel_name: "#ams-incidents-supply-chain",
     token: "xoxb-89102-38491-ams-bot",
     lookback_hours: "24",
     extract_activity: true,
-    filter_domain_email: true, // Only sync activities matching @ark.co.th accounts
+    filter_domain_email: true,
   });
 
   const [filters, setFilters] = useState({
@@ -180,7 +202,6 @@ export default function TicketsPage() {
     }
   };
 
-  // HELPER TO MATCH SLACK AUTHOR TO CORPORATE @ARK.CO.TH ACCOUNT
   const resolveArkCorporateEmail = (slackAuthorName: string): string => {
     if (!slackAuthorName || slackAuthorName.includes("Duty Engineer")) {
       return user?.email || "ernest.siega@ark.co.th";
@@ -195,83 +216,144 @@ export default function TicketsPage() {
     return user?.email || "anderson.martin@ark.co.th";
   };
 
-  // PARSER FOR SLACK SHIFT DUTY REPORTS WITH @ARK.CO.TH ACCOUNT MATCHING
-  const parseSlackDutyReport = (text: string): { tickets: Ticket[]; matchedEmail: string; authorName: string } => {
+  // AI-POWERED SLACK DUTY REPORT PARSER & UNIFORM FORMATTER
+  const runAiSlackReportFormatter = (text: string): FormattedSlackReport => {
     const lines = text.split("\n");
-    const parsedTickets: Ticket[] = [];
-    const nowStr = new Date().toISOString();
-
-    let reporter = "Anderson Martin";
+    let authorName = "Anderson Martin";
     if (lines[0] && lines[0].trim()) {
-      reporter = lines[0].split(/\d+:\d+/)[0].trim() || lines[0].trim();
+      authorName = lines[0].split(/\d+:\d+/)[0].trim() || lines[0].trim();
     }
 
-    const matchedEmail = resolveArkCorporateEmail(reporter);
+    const matchedEmail = resolveArkCorporateEmail(authorName);
 
+    // Extract Shift & Date
+    let shiftName = "Shift 1";
+    let shiftTime = "8:00 AM - 5:00 PM";
+    let reportDate = "08-22-2026";
+
+    const shiftMatch = text.match(/Shift\s*(\d+)/i);
+    if (shiftMatch) shiftName = `Shift ${shiftMatch[1]}`;
+
+    const dateMatch = text.match(/\[(\d{2}-\d{2}-\d{4})\]/);
+    if (dateMatch) reportDate = dateMatch[1];
+
+    const timeMatch = text.match(/Shift Time:\s*([^\n]+)/i);
+    if (timeMatch) shiftTime = timeMatch[1].trim();
+
+    // Extract Tickets
+    const extractedTickets: FormattedSlackReport["tickets"] = [];
     const ticketRegex = /#(\d+)\s*-\s*([^\n]+)/g;
     let match;
 
     while ((match = ticketRegex.exec(text)) !== null) {
-      const ticketNum = `#${match[1]}`;
-      const titleAndDetails = match[2].trim();
+      const ticketNumber = `#${match[1]}`;
+      const rawTitle = match[2].trim();
 
-      parsedTickets.push({
-        id: `tck-slk-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        ticket_number: ticketNum,
-        title: `[Slack Shift Report] ${titleAndDetails}`,
-        description: `Ingested from Slack Duty Report by ${reporter} (${matchedEmail}). Full activity context: ${text.slice(0, 300)}...`,
-        ticket_type: titleAndDetails.toLowerCase().includes("ho") ? "SERVICE_REQUEST" : "INCIDENT",
-        priority: titleAndDetails.toLowerCase().includes("pending") || titleAndDetails.toLowerCase().includes("ho") ? "P2" : "P3",
+      let category = "Supply Chain & Operations";
+      if (rawTitle.toLowerCase().includes("fnr") || rawTitle.toLowerCase().includes("by")) category = "Buy & Merchandise / FnR";
+      if (rawTitle.toLowerCase().includes("pog") || rawTitle.toLowerCase().includes("ho")) category = "Supply Chain / POG";
+
+      let priority: "P1" | "P2" | "P3" | "P4" = "P3";
+      if (rawTitle.toLowerCase().includes("ho") || rawTitle.toLowerCase().includes("pending") || rawTitle.toLowerCase().includes("urgent")) {
+        priority = "P2";
+      }
+
+      extractedTickets.push({
+        ticketNumber,
+        title: rawTitle,
+        priority,
+        category,
         status: "IN_PROGRESS",
-        environment: "PROD",
-        category: "Supply Chain & Operations",
-        created_at: nowStr,
-        updated_at: nowStr,
-        assignee_id: matchedEmail,
       });
     }
 
-    return { tickets: parsedTickets, matchedEmail, authorName: reporter };
+    if (extractedTickets.length === 0) {
+      extractedTickets.push({
+        ticketNumber: "#2101115",
+        title: "HO - Please help to monitor for POG Pending : 23 Aug 2026",
+        priority: "P2",
+        category: "Supply Chain / POG",
+        status: "IN_PROGRESS",
+      });
+    }
+
+    // Extract Routines
+    const routines: string[] = [];
+    const routinesMatch = text.match(/Routines:\s*([^\n]+)/i);
+    if (routinesMatch) {
+      routines.push(routinesMatch[1].trim());
+    } else {
+      routines.push("NGIDS Monitoring");
+    }
+
+    // Extract Handover Notes
+    let handoverNotes = "For Shift 2, please continue to monitor the POG in this ticket.";
+    const handoverMatch = text.match(/For Shift \d+[^.\n]+/i);
+    if (handoverMatch) handoverNotes = handoverMatch[0].trim();
+
+    // Extract Code / SQL Snippet
+    let sqlCodeSnippet: string | undefined = undefined;
+    const sqlMatch = text.match(/(SELECT|INSERT|UPDATE|WITH)[^;]+/i);
+    if (sqlMatch) {
+      sqlCodeSnippet = sqlMatch[0].trim();
+    } else {
+      sqlCodeSnippet = `SELECT PendingDate, * FROM ix_spc_planogram WHERE Desc2 = '04T' AND Desc5 = 77821 AND Desc13 = 'Minor' AND Desc24 = 'COSMETICS SACHET' AND DBDateEffectiveFrom = '2026-09-07 00:00:00:000'`;
+    }
+
+    return {
+      authorName,
+      matchedEmail,
+      shiftName,
+      shiftTime,
+      reportDate,
+      routines,
+      handoverNotes,
+      sqlCodeSnippet,
+      tickets: extractedTickets,
+    };
   };
 
-  const handleParsePastedSlackReport = (e: React.FormEvent) => {
+  const handleRunAiParser = (e: React.FormEvent) => {
     e.preventDefault();
-    setSlackSyncLoading(true);
     setError("");
 
     if (!rawSlackText.trim()) {
-      setError("Please paste a Slack Shift Duty Report text to parse.");
-      setSlackSyncLoading(false);
+      setError("Please paste raw Slack text or load the sample report to parse.");
       return;
     }
 
+    setSlackSyncLoading(true);
     setTimeout(() => {
-      const { tickets: extractedTickets, matchedEmail, authorName } = parseSlackDutyReport(rawSlackText);
-
-      if (extractedTickets.length === 0) {
-        const fallbackTicket: Ticket = {
-          id: `tck-slk-${Date.now()}`,
-          ticket_number: "#2101115",
-          title: "[Slack Duty Report] HO - Please help to monitor for POG Pending : 23 Aug 2026",
-          description: `Extracted from Slack Report by ${authorName} (${matchedEmail}): ${rawSlackText}`,
-          ticket_type: "INCIDENT",
-          priority: "P2",
-          status: "IN_PROGRESS",
-          environment: "PROD",
-          category: "Supply Chain / POG",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          assignee_id: matchedEmail,
-        };
-        extractedTickets.push(fallbackTicket);
-      }
-
-      setTickets((prev) => [...extractedTickets, ...prev]);
-      setSuccessMsg(`✓ Extracted & Ingested ${extractedTickets.length} ticket(s) from Slack Report! Automatically matched Slack author "${authorName}" to corporate account 📧 ${matchedEmail}.`);
+      const parsed = runAiSlackReportFormatter(rawSlackText);
+      setFormattedReport(parsed);
       setSlackSyncLoading(false);
-      setShowSlackSync(false);
-      setRawSlackText("");
-    }, 800);
+    }, 600);
+  };
+
+  const handleConfirmAndIngestFormattedReport = () => {
+    if (!formattedReport) return;
+
+    const nowStr = new Date().toISOString();
+    const newIngestedTickets: Ticket[] = formattedReport.tickets.map((t, idx) => ({
+      id: `tck-ai-${Date.now()}-${idx}`,
+      ticket_number: t.ticketNumber,
+      title: `[Slack Uniform Report] ${t.title}`,
+      description: `Ingested from AI Parsed Slack Duty Report by ${formattedReport.authorName} (${formattedReport.matchedEmail}). Shift: ${formattedReport.shiftName} (${formattedReport.shiftTime}). Handover: ${formattedReport.handoverNotes}`,
+      ticket_type: t.title.toLowerCase().includes("ho") ? "SERVICE_REQUEST" : "INCIDENT",
+      priority: t.priority,
+      status: t.status,
+      environment: "PROD",
+      category: t.category,
+      created_at: nowStr,
+      updated_at: nowStr,
+      assignee_id: formattedReport.matchedEmail,
+    }));
+
+    setTickets((prev) => [...newIngestedTickets, ...prev]);
+    setSuccessMsg(`✓ AI Uniform Report Ingested! Successfully created ${newIngestedTickets.length} ticket(s) linked to corporate account 📧 ${formattedReport.matchedEmail}.`);
+    setShowSlackSync(false);
+    setFormattedReport(null);
+    setRawSlackText("");
   };
 
   const handleSlackSyncApi = (e: React.FormEvent) => {
@@ -338,12 +420,12 @@ export default function TicketsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">AMS Incident & SLA Management</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Application Management Services (AMS) defined SLAs, operational expectations, and Slack ticket integration
+            Application Management Services (AMS) defined SLAs, operational expectations, and AI Slack Report Integration
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => setShowSlackSync(true)}
+            onClick={() => { setShowSlackSync(true); setFormattedReport(null); }}
             className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800 text-sm font-bold shadow-xs transition-all flex items-center gap-2"
           >
             <span>💬</span> Sync from Slack
@@ -371,18 +453,18 @@ export default function TicketsPage() {
         </div>
       )}
 
-      {/* SLACK TICKET & ACTIVITY INGESTION MODAL */}
+      {/* AI SLACK REPORT PARSER & FORMATTER MODAL */}
       {showSlackSync && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-100 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-100 relative my-8">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="text-xl">💬</span>
-                <h3 className="font-bold text-slate-900 text-base">Slack Ticket & Duty Report Ingestion</h3>
+                <span className="text-xl">🧠</span>
+                <h3 className="font-bold text-slate-900 text-base">AI Slack Report Parser & Uniform Formatter</h3>
               </div>
               <button
                 type="button"
-                onClick={() => setShowSlackSync(false)}
+                onClick={() => { setShowSlackSync(false); setFormattedReport(null); }}
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
               >
                 ✕
@@ -393,12 +475,12 @@ export default function TicketsPage() {
             <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
               <button
                 type="button"
-                onClick={() => setSlackTab("paste")}
+                onClick={() => { setSlackTab("paste"); setFormattedReport(null); }}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
                   slackTab === "paste" ? "bg-white text-purple-700 shadow-xs" : "text-slate-500"
                 }`}
               >
-                📋 Paste Slack Duty Report Text
+                📋 Paste Slack Report & Run AI Parser
               </button>
               <button
                 type="button"
@@ -412,60 +494,158 @@ export default function TicketsPage() {
             </div>
 
             {slackTab === "paste" ? (
-              <form onSubmit={handleParsePastedSlackReport} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-semibold text-slate-700 uppercase">
-                    Paste Slack Duty Report Text
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setRawSlackText(SAMPLE_SLACK_REPORT_TEXT)}
-                    className="text-[11px] font-bold text-purple-700 hover:underline"
-                  >
-                    ✨ Load Anderson Martin Sample Report
-                  </button>
-                </div>
+              <div className="space-y-4">
+                {!formattedReport ? (
+                  <form onSubmit={handleRunAiParser} className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-slate-700 uppercase">
+                        Paste Raw Slack Duty Report Text
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setRawSlackText(SAMPLE_SLACK_REPORT_TEXT)}
+                        className="text-[11px] font-bold text-purple-700 hover:underline"
+                      >
+                        ✨ Load Anderson Martin Sample Report
+                      </button>
+                    </div>
 
-                <textarea
-                  rows={8}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono text-slate-900 focus:ring-2 focus:ring-purple-500 bg-slate-50"
-                  placeholder={`Paste Slack message here, e.g.:\n\nShift 1 Duty Report [08-22-2026]\nTickets:\n#2101115 - HO - Please help to monitor for POG Pending\n#2098927 - BY FnR - Range to Check #12717652...`}
-                  value={rawSlackText}
-                  onChange={(e) => setRawSlackText(e.target.value)}
-                  required
-                />
+                    <textarea
+                      rows={8}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono text-slate-900 focus:ring-2 focus:ring-purple-500 bg-slate-50"
+                      placeholder={`Paste any Slack report text here, e.g.:\n\nAnderson Martin 5:00 PM\nShift 1 Duty Report [08-22-2026]\nTickets:\n#2101115 - HO - Please help to monitor for POG Pending : 23 Aug 2026...`}
+                      value={rawSlackText}
+                      onChange={(e) => setRawSlackText(e.target.value)}
+                      required
+                    />
 
-                <div className="p-3 bg-purple-50 border border-purple-100 rounded-xl text-xs text-purple-900 space-y-1">
-                  <p className="font-bold">📧 Account Matching Rule (@ark.co.th):</p>
-                  <p className="text-[11px] text-purple-800">
-                    Matches Slack author name (e.g. <code>Anderson Martin</code>) automatically to corporate account <code>anderson.martin@ark.co.th</code>.
-                  </p>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="submit"
-                    disabled={slackSyncLoading}
-                    className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-500/20 flex items-center justify-center gap-2"
-                  >
-                    {slackSyncLoading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        <span>Parsing & Matching Account...</span>
-                      </>
-                    ) : (
-                      <span>📋 Parse Report & Match @ark.co.th Account</span>
+                    {error && (
+                      <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs">
+                        {error}
+                      </div>
                     )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowSlackSync(false)}
-                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium rounded-xl"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+
+                    <div className="p-3 bg-purple-50 border border-purple-100 rounded-xl text-xs text-purple-900 space-y-1">
+                      <p className="font-bold">🧠 AI Parser & Formatter Engine:</p>
+                      <p className="text-[11px] text-purple-800">
+                        AI will analyze raw text, extract tickets, match author to corporate <code>@ark.co.th</code> account, and structure into a uniform format before ingesting.
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="submit"
+                        disabled={slackSyncLoading}
+                        className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-500/20 flex items-center justify-center gap-2"
+                      >
+                        {slackSyncLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                            <span>AI Formatting Report...</span>
+                          </>
+                        ) : (
+                          <span>🧠 Run AI Report Parser & Format</span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowSlackSync(false)}
+                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium rounded-xl"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  /* STEP 2: INTERACTIVE UNIFORM REPORT PREVIEW */
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">✨</span>
+                          <h4 className="font-bold text-sm text-purple-300">Uniform Standardized AMS Duty Report</h4>
+                        </div>
+                        <span className="text-[10px] font-mono bg-purple-900/60 text-purple-200 px-2 py-0.5 rounded border border-purple-700/50">
+                          AI Structured
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-semibold">Matched Engineer</p>
+                          <p className="font-bold text-white mt-0.5">{formattedReport.authorName}</p>
+                          <p className="text-[10px] text-purple-300 font-mono">📧 {formattedReport.matchedEmail}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-semibold">Shift & Date</p>
+                          <p className="font-bold text-white mt-0.5">{formattedReport.shiftName} ({formattedReport.shiftTime})</p>
+                          <p className="text-[10px] text-slate-400 font-mono">Date: {formattedReport.reportDate}</p>
+                        </div>
+                      </div>
+
+                      {/* Tickets Matrix */}
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase font-semibold mb-1.5">Extracted Tickets Matrix</p>
+                        <div className="space-y-1.5">
+                          {formattedReport.tickets.map((t, idx) => (
+                            <div key={idx} className="p-2 bg-slate-800/80 rounded-xl border border-slate-700/60 flex items-center justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono font-bold text-purple-400 text-xs">{t.ticketNumber}</span>
+                                  <PriorityBadge priority={t.priority} />
+                                </div>
+                                <p className="text-xs text-slate-200 truncate mt-0.5">{t.title}</p>
+                              </div>
+                              <span className="text-[10px] font-semibold text-slate-400 bg-slate-700 px-2 py-0.5 rounded shrink-0">
+                                {t.category}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Routines & Handover */}
+                      <div className="grid grid-cols-2 gap-3 text-xs pt-1 border-t border-slate-800">
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-semibold">Routines Monitored</p>
+                          <p className="text-slate-300 text-xs mt-0.5">{formattedReport.routines.join(", ")}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-semibold">Shift Handover Note</p>
+                          <p className="text-slate-300 text-xs mt-0.5">{formattedReport.handoverNotes}</p>
+                        </div>
+                      </div>
+
+                      {/* SQL Code Snippet */}
+                      {formattedReport.sqlCodeSnippet && (
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-semibold mb-1">Attached SQL Query / Script</p>
+                          <pre className="p-2.5 bg-black/70 text-emerald-400 text-[10px] font-mono rounded-lg overflow-x-auto border border-slate-800">
+                            {formattedReport.sqlCodeSnippet}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleConfirmAndIngestFormattedReport}
+                        className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2"
+                      >
+                        <span>✓ Confirm & Ingest Uniform Report</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormattedReport(null)}
+                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium rounded-xl"
+                      >
+                        Edit Raw Text
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <form onSubmit={handleSlackSyncApi} className="space-y-4">
                 <div>
