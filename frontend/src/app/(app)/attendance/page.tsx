@@ -33,15 +33,26 @@ interface DraggableTeamMember {
 }
 
 const INITIAL_TEAM_MEMBERS: DraggableTeamMember[] = [
-  {
-    id: "eng-101",
-    name: "Ernest Siega",
-    email: "ernest.siega@ark.co.th",
-    role: "AMS_HEAD",
-    domain: "Supply chain and Planning Domain",
-    status: "WORKING",
-    actual_start: "08:00 AM",
-  },
+  { id: "eng-101", name: "Ernest Siega", email: "ernest.siega@ark.co.th", role: "AMS_HEAD", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-102", name: "Anderson Martin", email: "anderson.martin@ark.co.th", role: "AMS_ENGINEER", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-103", name: "Arthur Myles", email: "arthur.myles@ark.co.th", role: "SENIOR_ENGINEER", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-104", name: "Asher M. Taylor", email: "asher.m.taylor@ark.co.th", role: "TEAM_LEAD", domain: "Finance", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-105", name: "Ed Wong", email: "ed.wong@ark.co.th", role: "AMS_ENGINEER", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-106", name: "Essam Nabil", email: "essam.nabil@ark.co.th", role: "SUPPORT_ANALYST", domain: "Buy and Merchandise Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-107", name: "Fred Valdez", email: "fred.valdez@ark.co.th", role: "AMS_ENGINEER", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-108", name: "Gee Isaac", email: "gee.isaac@ark.co.th", role: "SENIOR_ENGINEER", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-109", name: "Maria Yilmaz", email: "maria.yilmaz@ark.co.th", role: "TEAM_LEAD", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-110", name: "Nielsen Perez", email: "nielsen.perez@ark.co.th", role: "SUPPORT_ANALYST", domain: "Finance", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-111", name: "Sean Reed", email: "sean.reed@ark.co.th", role: "AMS_ENGINEER", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-112", name: "Shaun Hao", email: "shaun.hao@ark.co.th", role: "SENIOR_ENGINEER", domain: "Buy and Merchandise Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-113", name: "Zack Chase", email: "zack.chase@ark.co.th", role: "AMS_ENGINEER", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-114", name: "BJ Ismael", email: "bjismael@ark.co.th", role: "SUPPORT_ANALYST", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-115", name: "Arnel Maala", email: "arnel.maala@ark.co.th", role: "TEAM_LEAD", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-116", name: "Mohammad Bari", email: "mohammad.bari@ark.co.th", role: "TEAM_LEAD", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-117", name: "Claire Acula", email: "claire.acula@ark.co.th", role: "TEAM_LEAD", domain: "Buy and Merchandise Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-118", name: "Jonathan Morales", email: "jonathan.morales@ark.co.th", role: "SENIOR_ENGINEER", domain: "Finance", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-119", name: "Patrick Cinco", email: "patrick.cinco@ark.co.th", role: "AMS_ENGINEER", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
+  { id: "eng-120", name: "Vryll Atilano", email: "vryll.atilano@ark.co.th", role: "SUPPORT_ANALYST", domain: "Buy and Merchandise Domain", status: "WORKING", actual_start: "08:00 AM" },
 ];
 
 // Initial default schedule mapping for today's date
@@ -49,13 +60,19 @@ const TODAY_DATE_STR = new Date().toISOString().split("T")[0];
 
 const INITIAL_DATE_SCHEDULES: Record<string, Record<string, string | null>> = {
   [TODAY_DATE_STR]: {
-    "eng-101": null,
+    "eng-101": null, "eng-102": null, "eng-103": null, "eng-104": null, "eng-105": null,
+    "eng-106": null, "eng-107": null, "eng-108": null, "eng-109": null, "eng-110": null,
+    "eng-111": null, "eng-112": null, "eng-113": null, "eng-114": null, "eng-115": null,
+    "eng-116": null, "eng-117": null, "eng-118": null, "eng-119": null, "eng-120": null,
   },
 };
 
 const INITIAL_DATE_DUTY_ROLES: Record<string, Record<string, ShiftDutyRole>> = {
   [TODAY_DATE_STR]: {
-    "eng-101": "PIC",
+    "eng-101": "PIC", "eng-102": "SUPPORT", "eng-103": "SUPPORT", "eng-104": "TECHNICAL_ADMIN", "eng-105": "SUPPORT",
+    "eng-106": "SUPPORT", "eng-107": "SUPPORT", "eng-108": "SUPPORT", "eng-109": "TECHNICAL_ADMIN", "eng-110": "SUPPORT",
+    "eng-111": "SUPPORT", "eng-112": "SUPPORT", "eng-113": "SUPPORT", "eng-114": "SUPPORT", "eng-115": "TECHNICAL_ADMIN",
+    "eng-116": "TECHNICAL_ADMIN", "eng-117": "TECHNICAL_ADMIN", "eng-118": "SUPPORT", "eng-119": "SUPPORT", "eng-120": "SUPPORT",
   },
 };
 

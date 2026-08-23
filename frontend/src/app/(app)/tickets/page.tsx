@@ -95,6 +95,25 @@ interface CorporateEngineer {
 
 const CORPORATE_ENGINEERS: CorporateEngineer[] = [
   { name: "Ernest Siega", email: "ernest.siega@ark.co.th", role: "AMS Head", domain: "Supply chain and Planning Domain", dutyRole: "PIC", shiftType: "CURRENT" },
+  { name: "Anderson Martin", email: "anderson.martin@ark.co.th", role: "AMS Engineer", domain: "Supply chain and Planning Domain", dutyRole: "SUPPORT", shiftType: "CURRENT" },
+  { name: "Arthur Myles", email: "arthur.myles@ark.co.th", role: "Senior Engineer", domain: "Store Ops, Sales", dutyRole: "SUPPORT", shiftType: "CURRENT" },
+  { name: "Asher M. Taylor", email: "asher.m.taylor@ark.co.th", role: "Team Lead", domain: "Finance", dutyRole: "TECHNICAL_ADMIN", shiftType: "CURRENT" },
+  { name: "Ed Wong", email: "ed.wong@ark.co.th", role: "AMS Engineer", domain: "Integration and Middleware Domain", dutyRole: "SUPPORT", shiftType: "CURRENT" },
+  { name: "Essam Nabil", email: "essam.nabil@ark.co.th", role: "Support Analyst", domain: "Buy and Merchandise Domain", dutyRole: "SUPPORT", shiftType: "CURRENT" },
+  { name: "Fred Valdez", email: "fred.valdez@ark.co.th", role: "AMS Engineer", domain: "Supply chain and Planning Domain", dutyRole: "SUPPORT", shiftType: "CURRENT" },
+  { name: "Gee Isaac", email: "gee.isaac@ark.co.th", role: "Senior Engineer", domain: "Store Ops, Sales", dutyRole: "SUPPORT", shiftType: "CURRENT" },
+  { name: "Maria Yilmaz", email: "maria.yilmaz@ark.co.th", role: "Team Lead", domain: "Supply chain and Planning Domain", dutyRole: "TECHNICAL_ADMIN", shiftType: "CURRENT" },
+  { name: "Nielsen Perez", email: "nielsen.perez@ark.co.th", role: "Support Analyst", domain: "Finance", dutyRole: "SUPPORT", shiftType: "NEXT" },
+  { name: "Sean Reed", email: "sean.reed@ark.co.th", role: "AMS Engineer", domain: "Integration and Middleware Domain", dutyRole: "SUPPORT", shiftType: "NEXT" },
+  { name: "Shaun Hao", email: "shaun.hao@ark.co.th", role: "Senior Engineer", domain: "Buy and Merchandise Domain", dutyRole: "SUPPORT", shiftType: "NEXT" },
+  { name: "Zack Chase", email: "zack.chase@ark.co.th", role: "AMS Engineer", domain: "Store Ops, Sales", dutyRole: "SUPPORT", shiftType: "NEXT" },
+  { name: "BJ Ismael", email: "bjismael@ark.co.th", role: "Support Analyst", domain: "Supply chain and Planning Domain", dutyRole: "SUPPORT", shiftType: "NEXT" },
+  { name: "Arnel Maala", email: "arnel.maala@ark.co.th", role: "Team Lead", domain: "Store Ops, Sales", dutyRole: "TECHNICAL_ADMIN", shiftType: "NEXT" },
+  { name: "Mohammad Bari", email: "mohammad.bari@ark.co.th", role: "Team Lead", domain: "Integration and Middleware Domain", dutyRole: "TECHNICAL_ADMIN", shiftType: "NEXT" },
+  { name: "Claire Acula", email: "claire.acula@ark.co.th", role: "Team Lead", domain: "Buy and Merchandise Domain", dutyRole: "TECHNICAL_ADMIN", shiftType: "NEXT" },
+  { name: "Jonathan Morales", email: "jonathan.morales@ark.co.th", role: "Senior Engineer", domain: "Finance", dutyRole: "SUPPORT", shiftType: "NEXT" },
+  { name: "Patrick Cinco", email: "patrick.cinco@ark.co.th", role: "AMS Engineer", domain: "Integration and Middleware Domain", dutyRole: "SUPPORT", shiftType: "NEXT" },
+  { name: "Vryll Atilano", email: "vryll.atilano@ark.co.th", role: "Support Analyst", domain: "Buy and Merchandise Domain", dutyRole: "SUPPORT", shiftType: "NEXT" },
 ];
 
 function PriorityBadge({ priority }: { priority: string }) {
