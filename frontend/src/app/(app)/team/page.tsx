@@ -4,6 +4,8 @@
  * Team & Domain Management Page.
  * - AMS Head: Can view all team members, assign Team Leads, add new members, and edit team member position & details.
  * - Team Leads: Can view members belonging to their domain and add team members.
+ * - Adding a team member defaults Lotus's branch unit to "LTT" (no input required on add).
+ * - AMS Head can edit/change the branch unit in the edit modal.
  */
 
 import React, { useEffect, useState } from "react";
@@ -41,7 +43,7 @@ export default function TeamPage() {
     last_name: "",
     role: "AMS_ENGINEER",
     domain: OFFICIAL_DOMAINS[0],
-    lotuss_name: "Lotus's Thailand HQ",
+    lotuss_name: "LTT",
     is_active: true,
   });
 
@@ -56,16 +58,16 @@ export default function TeamPage() {
     first_name: "",
     last_name: "",
     domain: OFFICIAL_DOMAINS[0],
-    lotuss_name: "Lotus's Thailand HQ",
+    lotuss_name: "LTT",
   });
 
-  // Form State for Adding Team Member
+  // Form State for Adding Team Member (Lotus's unit defaults to "LTT")
   const [newMember, setNewMember] = useState({
     first_name: "",
     last_name: "",
     email: "",
     domain: isAmsHead ? OFFICIAL_DOMAINS[0] : userDomain,
-    lotuss_name: "Lotus's Thailand HQ",
+    lotuss_name: "LTT",
     role: "AMS_ENGINEER",
   });
 
@@ -95,7 +97,7 @@ export default function TeamPage() {
       last_name: targetUser.last_name,
       role: targetUser.role,
       domain: targetUser.domain || OFFICIAL_DOMAINS[0],
-      lotuss_name: targetUser.lotuss_name || "Lotus's Thailand HQ",
+      lotuss_name: targetUser.lotuss_name || "LTT",
       is_active: targetUser.is_active,
     });
     setCreateError("");
@@ -114,7 +116,7 @@ export default function TeamPage() {
               last_name: editForm.last_name.trim(),
               role: editForm.role,
               domain: editForm.domain,
-              lotuss_name: editForm.lotuss_name.trim(),
+              lotuss_name: editForm.lotuss_name.trim() || "LTT",
               is_active: editForm.is_active,
             }
           : u
@@ -142,7 +144,7 @@ export default function TeamPage() {
         first_name: newLead.first_name.trim(),
         last_name: newLead.last_name.trim(),
         domain: newLead.domain,
-        lotuss_name: newLead.lotuss_name.trim(),
+        lotuss_name: newLead.lotuss_name.trim() || "LTT",
       });
 
       setCreateSuccess(`Successfully assigned ${newLead.first_name} ${newLead.last_name} as Team Lead for ${newLead.domain}`);
@@ -151,7 +153,7 @@ export default function TeamPage() {
         first_name: "",
         last_name: "",
         domain: OFFICIAL_DOMAINS[0],
-        lotuss_name: "Lotus's Thailand HQ",
+        lotuss_name: "LTT",
       });
       setShowCreateLead(false);
       await loadUsers();
@@ -179,7 +181,7 @@ export default function TeamPage() {
       last_name: newMember.last_name.trim(),
       role: newMember.role,
       domain: isAmsHead ? newMember.domain : userDomain,
-      lotuss_name: newMember.lotuss_name.trim() || "Lotus's Thailand HQ",
+      lotuss_name: "LTT", // Defaulted automatically to LTT
       timezone: "Asia/Bangkok",
       is_active: true,
     };
@@ -195,7 +197,7 @@ export default function TeamPage() {
       last_name: "",
       email: "",
       domain: isAmsHead ? OFFICIAL_DOMAINS[0] : userDomain,
-      lotuss_name: "Lotus's Thailand HQ",
+      lotuss_name: "LTT",
       role: "AMS_ENGINEER",
     });
     setShowAddMemberModal(false);
@@ -342,7 +344,7 @@ export default function TeamPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Lotus's Name / Branch Unit</label>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Lotus's Name / Branch Unit (AMS Head Control)</label>
                 <input
                   type="text"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500"
@@ -485,20 +487,8 @@ export default function TeamPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Lotus's Name / Branch Unit</label>
-                <input
-                  type="text"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500"
-                  placeholder="Lotus's Thailand HQ"
-                  value={newMember.lotuss_name}
-                  onChange={(e) => setNewMember({ ...newMember, lotuss_name: e.target.value })}
-                  required
-                />
-              </div>
-
               <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-800">
-                ⚡ <strong>Automated Onboarding Email:</strong> Upon submitting, an account will be created and an onboarding link will be sent to the email owner to complete registration.
+                ⚡ <strong>Branch Unit Default:</strong> Lotus's branch unit defaults to <strong>LTT</strong> automatically. AMS Head can change the unit at any time.
               </div>
 
               <div className="flex gap-2 pt-2">
@@ -614,7 +604,7 @@ export default function TeamPage() {
                 id="lead-lotuss"
                 type="text"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500"
-                placeholder="Lotus's Thailand HQ"
+                placeholder="LTT"
                 value={newLead.lotuss_name}
                 onChange={(e) => setNewLead({ ...newLead, lotuss_name: e.target.value })}
                 required
@@ -686,7 +676,7 @@ export default function TeamPage() {
                         first_name: "",
                         last_name: "",
                         domain: domName,
-                        lotuss_name: "Lotus's Thailand HQ",
+                        lotuss_name: "LTT",
                       });
                       setShowCreateLead(true);
                     }}
@@ -766,7 +756,7 @@ export default function TeamPage() {
                         {u.role === "AMS_HEAD" || u.role === "SUPER_ADMIN" ? "AMS Head" : u.role.replace("_", " ")}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-xs">{u.lotuss_name || "Lotus's Thailand HQ"}</td>
+                    <td className="py-3 px-4 text-xs font-bold text-slate-800">{u.lotuss_name || "LTT"}</td>
                     <td className="py-3 px-4">
                       <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
                         u.is_active ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"
