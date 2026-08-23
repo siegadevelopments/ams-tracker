@@ -24,11 +24,11 @@ interface MonthlyPlottedDay {
 
 // Dynamic Team Lead lookup per domain
 const DOMAIN_LEADS: Record<string, string> = {
-  "Supply chain and Planning Domain": "Maria Yilmaz",
-  "Store Ops, Sales": "Arnel Maala",
-  "Integration and Middleware Domain": "Mohammad Bari",
+  "Supply chain and Planning Domain": "Steven Ybanez",
+  "Finance": "Jonathan Morales",
+  "Store Ops, Sales": "Kyle Amaquin",
   "Buy and Merchandise Domain": "Claire Acula",
-  "Finance": "Asher M. Taylor",
+  "Integration and Middleware Domain": "Arnel Maala",
 };
 
 const getLeadForDomain = (domainStr: string): string => {
@@ -38,7 +38,7 @@ const getLeadForDomain = (domainStr: string): string => {
       return leadName;
     }
   }
-  return "Maria Yilmaz"; // Default active Lead
+  return "Steven Ybanez"; // Default active Lead
 };
 
 // Generate realistic plotted schedule for the whole month (31 days)
