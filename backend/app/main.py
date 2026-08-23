@@ -17,9 +17,17 @@ from app.core.exceptions import (
     UnauthorizedError,
     ValidationError,
 )
-from app.routers import attendance, auth, health, reports, shifts, teams, tickets, users
+from contextlib import asynccontextmanager
+from app.services.init_db import init_db
 
 settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Run database schema initialization and seed default data on app startup."""
+    await init_db()
+    yield
 
 
 def create_app() -> FastAPI:
@@ -29,6 +37,7 @@ def create_app() -> FastAPI:
         version=settings.APP_VERSION,
         docs_url="/docs" if settings.DEBUG else None,
         redoc_url="/redoc" if settings.DEBUG else None,
+        lifespan=lifespan,
     )
 
     # ─── CORS ──────────────────────────────────────────────────────────
