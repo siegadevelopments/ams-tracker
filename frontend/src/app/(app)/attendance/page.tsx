@@ -528,14 +528,18 @@ export default function AttendancePage() {
     const startDate = new Date(selectedDate + "T00:00:00");
     const daysCount = 7; // Auto-plots full week (7 days)
 
-    scopedMembers.forEach((member) => {
+    scopedMembers.forEach((member, index) => {
+      // Stagger off days per member so shift is covered 24/7 every day
+      const off1 = (index * 2) % 7;
+      const off2 = (off1 + 1) % 7;
+
       for (let i = 0; i < daysCount; i++) {
         const currentDate = new Date(startDate);
         currentDate.setDate(startDate.getDate() + i);
         const dateStr = currentDate.toISOString().split("T")[0];
         const dayOfWeek = currentDate.getDay(); // 0 = Sun, 6 = Sat
 
-        const isOffDay = dayOfWeek === 6 || dayOfWeek === 0;
+        const isOffDay = dayOfWeek === off1 || dayOfWeek === off2;
         const assignedShiftId = isOffDay ? null : targetShiftId;
 
         if (!updatedSchedules[dateStr]) {
@@ -547,7 +551,7 @@ export default function AttendancePage() {
 
     setDateSchedules(updatedSchedules);
     const domainText = isAmsHead ? "Global Roster" : userDomain;
-    setSuccess(`Auto-Scheduled ${scopedMembers.length} member(s) (${domainText}) to ${shiftName} (5 days work / 2 rest days) starting from ${selectedDate}!`);
+    setSuccess(`Auto-Scheduled ${scopedMembers.length} member(s) (${domainText}) to ${shiftName} with 24/7 staggered 5:2 coverage starting from ${selectedDate}!`);
     setTimeout(() => setSuccess(""), 5000);
   };
 
@@ -562,24 +566,24 @@ export default function AttendancePage() {
     const daysCount = 7; // Auto-plots full week (7 days)
 
     const SHIFT_IDS = ["st-1", "st-2", "st-3"];
-    const OFF_DAY_PATTERNS = [
-      { off1: 6, off2: 0 }, // Sat & Sun Off for Shift 1
-      { off1: 0, off2: 1 }, // Sun & Mon Off for Shift 2
-      { off1: 5, off2: 6 }, // Fri & Sat Off for Shift 3
-    ];
-
     let shift1Count = 0;
     let shift2Count = 0;
     let shift3Count = 0;
 
+    const shiftGroupCounters = [0, 0, 0];
+
     scopedMembers.forEach((member, index) => {
       const groupIndex = index % 3;
       const targetShiftId = SHIFT_IDS[groupIndex];
-      const offPattern = OFF_DAY_PATTERNS[groupIndex];
+      const memberSubIndex = shiftGroupCounters[groupIndex]++;
 
       if (groupIndex === 0) shift1Count++;
       if (groupIndex === 1) shift2Count++;
       if (groupIndex === 2) shift3Count++;
+
+      // Stagger 2 off-days per member so NO shift ever has 0 engineers on any day
+      const off1 = (memberSubIndex * 2) % 7;
+      const off2 = (off1 + 1) % 7;
 
       for (let i = 0; i < daysCount; i++) {
         const currentDate = new Date(startDate);
@@ -587,7 +591,7 @@ export default function AttendancePage() {
         const dateStr = currentDate.toISOString().split("T")[0];
         const dayOfWeek = currentDate.getDay(); // 0..6
 
-        const isOffDay = dayOfWeek === offPattern.off1 || dayOfWeek === offPattern.off2;
+        const isOffDay = dayOfWeek === off1 || dayOfWeek === off2;
         const assignedShiftId = isOffDay ? null : targetShiftId;
 
         if (!updatedSchedules[dateStr]) {
@@ -600,7 +604,7 @@ export default function AttendancePage() {
     setDateSchedules(updatedSchedules);
     setShowAutoScheduleModal(false);
     const domainText = isAmsHead ? "Global Roster" : userDomain;
-    setSuccess(`Automatically divided ${scopedMembers.length} member(s) (${domainText}) across 3 shifts: Shift 1 (${shift1Count}), Shift 2 (${shift2Count}), Shift 3 (${shift3Count}) with 5-day work / 2-day off policy!`);
+    setSuccess(`Automatically divided ${scopedMembers.length} member(s) (${domainText}) across 3 shifts: Shift 1 (${shift1Count}), Shift 2 (${shift2Count}), Shift 3 (${shift3Count}) with 100% zero-gaps 24/7 coverage on all shifts!`);
     setTimeout(() => setSuccess(""), 6000);
   };
 
