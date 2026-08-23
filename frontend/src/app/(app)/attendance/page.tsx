@@ -338,13 +338,12 @@ export default function AttendancePage() {
 
   const activeWeekDates = getWeekDates(selectedDate);
 
-  // Get active shift ID for a member on a specific date (Uses 24/7 Google Sheet Roster Generator if unassigned)
+  // Get active shift ID for a member on a specific date (Starts clean until auto-scheduled or manually assigned)
   const getMemberShiftForDate = (memberId: string, dateStr: string): string | null => {
     if (dateSchedules[dateStr] && dateSchedules[dateStr][memberId] !== undefined) {
       return dateSchedules[dateStr][memberId];
     }
-    const generated = generateGoogleSheetRosterSchedule(dateStr);
-    return generated.schedules[memberId] !== undefined ? generated.schedules[memberId] : null;
+    return null;
   };
 
   const handleClearAllSchedules = () => {
@@ -354,13 +353,12 @@ export default function AttendancePage() {
     setTimeout(() => setSuccess(""), 4000);
   };
 
-  // Get active shift duty role for a member on a specific date (Defaults to Google Sheet PIC / Support)
+  // Get active shift duty role for a member on a specific date (Defaults to "SUPPORT")
   const getMemberDutyRoleForDate = (memberId: string, dateStr: string): ShiftDutyRole => {
     if (dutyRoleSchedules[dateStr] && dutyRoleSchedules[dateStr][memberId]) {
       return dutyRoleSchedules[dateStr][memberId];
     }
-    const generated = generateGoogleSheetRosterSchedule(dateStr);
-    return generated.roles[memberId] || "SUPPORT";
+    return "SUPPORT";
   };
 
   // Get active shift ID for a member on the selected date
@@ -589,49 +587,19 @@ export default function AttendancePage() {
     }
 
     const updatedSchedules = { ...dateSchedules };
-    const startDate = new Date(selectedDate + "T00:00:00");
-    const daysCount = 7; // Auto-plots full week (7 days)
+    const updatedDutyRoles = { ...dutyRoleSchedules };
 
-    const SHIFT_IDS = ["st-1", "st-2", "st-3"];
-    let shift1Count = 0;
-    let shift2Count = 0;
-    let shift3Count = 0;
-
-    const shiftGroupCounters = [0, 0, 0];
-
-    scopedMembers.forEach((member, index) => {
-      const groupIndex = index % 3;
-      const targetShiftId = SHIFT_IDS[groupIndex];
-      const memberSubIndex = shiftGroupCounters[groupIndex]++;
-
-      if (groupIndex === 0) shift1Count++;
-      if (groupIndex === 1) shift2Count++;
-      if (groupIndex === 2) shift3Count++;
-
-      // Stagger 2 off-days per member so NO shift ever has 0 engineers on any day
-      const off1 = (memberSubIndex * 2) % 7;
-      const off2 = (off1 + 1) % 7;
-
-      for (let i = 0; i < daysCount; i++) {
-        const currentDate = new Date(startDate);
-        currentDate.setDate(startDate.getDate() + i);
-        const dateStr = currentDate.toISOString().split("T")[0];
-        const dayOfWeek = currentDate.getDay(); // 0..6
-
-        const isOffDay = dayOfWeek === off1 || dayOfWeek === off2;
-        const assignedShiftId = isOffDay ? null : targetShiftId;
-
-        if (!updatedSchedules[dateStr]) {
-          updatedSchedules[dateStr] = {};
-        }
-        updatedSchedules[dateStr][member.id] = assignedShiftId;
-      }
+    activeWeekDates.forEach((dateStr) => {
+      const generated = generateGoogleSheetRosterSchedule(dateStr);
+      updatedSchedules[dateStr] = { ...(updatedSchedules[dateStr] || {}), ...generated.schedules };
+      updatedDutyRoles[dateStr] = { ...(updatedDutyRoles[dateStr] || {}), ...generated.roles };
     });
 
     setDateSchedules(updatedSchedules);
+    setDutyRoleSchedules(updatedDutyRoles);
     setShowAutoScheduleModal(false);
     const domainText = isAmsHead ? "Global Roster" : userDomain;
-    setSuccess(`Automatically divided ${scopedMembers.length} member(s) (${domainText}) across 3 shifts: Shift 1 (${shift1Count}), Shift 2 (${shift2Count}), Shift 3 (${shift3Count}) with 100% zero-gaps 24/7 coverage on all shifts!`);
+    setSuccess(`Auto-Generated 24/7 Operational Roster for ${scopedMembers.length} member(s) (${domainText}) across Shift 1, Shift 2, and Shift 3 (Nightly) with PIC designations & zero empty shift gaps!`);
     setTimeout(() => setSuccess(""), 6000);
   };
 
