@@ -9,7 +9,8 @@
  * - Official Schedule Categories: Shift 1, Shift 2, Shift 3, Training, and Leave Schedule (On Leave / Vacation).
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export type ShiftDutyRole = "SUPPORT" | "PIC" | "TECHNICAL_ADMIN";
@@ -32,22 +33,7 @@ interface DraggableTeamMember {
   status: string;
 }
 
-const INITIAL_TEAM_MEMBERS: DraggableTeamMember[] = [
-  { id: "eng-100", name: "Ernest Siega", email: "ernest.siega@ark.co.th", role: "AMS_HEAD", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-101", name: "TL Steven Ybanez", email: "steven.ybanez@ark.co.th", role: "TEAM_LEAD", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-118", name: "TL Jonathan Morales", email: "jonathan.morales@ark.co.th", role: "TEAM_LEAD", domain: "Finance", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-104", name: "TL Kyle Amaquin", email: "kyle.amaquin@ark.co.th", role: "TEAM_LEAD", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-102", name: "Joylyn Cubile", email: "joylyn.cubile@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-105", name: "Melkin Ayalin", email: "melkin.ayalin@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-108", name: "Keano Sevilla", email: "keano.sevilla@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-107", name: "Dwight Corpus", email: "dwight.corpus@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-106", name: "France Rebollos", email: "france.rebollos@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Buy and Merchandise Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-117", name: "Claire Acula", email: "claire.acula@ark.co.th", role: "TEAM_LEAD", domain: "Buy and Merchandise Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-116", name: "Khenidy Mohammad", email: "khenidy.mohammad@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-114", name: "Mahmudi Ismael", email: "mahmudi.ismael@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Supply chain and Planning Domain", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-115", name: "Arnel Maala", email: "arnel.maala@ark.co.th", role: "TEAM_LEAD", domain: "Store Ops, Sales", status: "WORKING", actual_start: "08:00 AM" },
-  { id: "eng-119", name: "Patrick Cinco", email: "patrick.cinco@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
-];
+const INITIAL_TEAM_MEMBERS: DraggableTeamMember[] = [];
 
 // 24/7 Operational Roster Schedule Generator (Dynamic for any team list)
 // Excludes AMS Head, assigns Team Leads to Mon-Fri Shift 1, and dynamically balances Engineers across 3 shifts with 1 PIC per shift everyday
@@ -307,7 +293,55 @@ function PunctualityRemark({ lateMinutes, overtimeMinutes, isLeave }: { lateMinu
 
 export default function AttendancePage() {
   const { user } = useAuth();
-  const [teamMembers] = useState<DraggableTeamMember[]>(INITIAL_TEAM_MEMBERS);
+  const [teamMembers, setTeamMembers] = useState<DraggableTeamMember[]>([]);
+
+  useEffect(() => {
+    const fetchRealUsers = async () => {
+      try {
+        const res = await api.listUsers();
+        if (res.data && res.data.length > 0) {
+          const mapped: DraggableTeamMember[] = res.data.map((u) => ({
+            id: u.id,
+            name: u.role === "TEAM_LEAD" && !u.first_name.startsWith("TL ") ? `TL ${u.first_name} ${u.last_name}` : `${u.first_name} ${u.last_name}`,
+            email: u.email,
+            role: u.role,
+            domain: u.domain || "Supply chain and Planning Domain",
+            status: u.is_active ? "WORKING" : "OFFLINE",
+            actual_start: "08:00 AM",
+          }));
+          setTeamMembers(mapped);
+        } else if (user) {
+          setTeamMembers([
+            {
+              id: user.id,
+              name: `${user.first_name} ${user.last_name}`,
+              email: user.email,
+              role: user.role,
+              domain: (user as any).domain || "Supply chain and Planning Domain",
+              status: "WORKING",
+              actual_start: "08:00 AM",
+            },
+          ]);
+        }
+      } catch (err) {
+        if (user) {
+          setTeamMembers([
+            {
+              id: user.id,
+              name: `${user.first_name} ${user.last_name}`,
+              email: user.email,
+              role: user.role,
+              domain: (user as any).domain || "Supply chain and Planning Domain",
+              status: "WORKING",
+              actual_start: "08:00 AM",
+            },
+          ]);
+        }
+      }
+    };
+
+    fetchRealUsers();
+  }, [user]);
   const [dateSchedules, setDateSchedules] = useState<Record<string, Record<string, string | null>>>(INITIAL_DATE_SCHEDULES);
   const [dutyRoleSchedules, setDutyRoleSchedules] = useState<Record<string, Record<string, ShiftDutyRole>>>(INITIAL_DATE_DUTY_ROLES);
   
