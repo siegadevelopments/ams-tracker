@@ -49,9 +49,12 @@ const INITIAL_TEAM_MEMBERS: DraggableTeamMember[] = [
   { id: "eng-119", name: "Patrick Cinco", email: "patrick.cinco@ark.co.th", role: "SUPPORT_ENGINEER", domain: "Integration and Middleware Domain", status: "WORKING", actual_start: "08:00 AM" },
 ];
 
-// 24/7 Operational Google Sheet Roster Schedule Generator
-// Excludes AMS Head from scheduling & ensures STRICTLY 1 PIC per shift everyday
-const generateGoogleSheetRosterSchedule = (dateStr: string): { schedules: Record<string, string | null>; roles: Record<string, ShiftDutyRole> } => {
+// 24/7 Operational Roster Schedule Generator (Dynamic for any team list)
+// Excludes AMS Head, assigns Team Leads to Mon-Fri Shift 1, and dynamically balances Engineers across 3 shifts with 1 PIC per shift everyday
+const generateGoogleSheetRosterSchedule = (
+  dateStr: string,
+  teamList: DraggableTeamMember[]
+): { schedules: Record<string, string | null>; roles: Record<string, ShiftDutyRole> } => {
   const schedules: Record<string, string | null> = {};
   const roles: Record<string, ShiftDutyRole> = {};
 
@@ -60,71 +63,54 @@ const generateGoogleSheetRosterSchedule = (dateStr: string): { schedules: Record
   const dayNumber = dateObj.getDate();
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-  // 1. AMS Head: Excluded from shift scheduling (null)
-  const amsHeads = INITIAL_TEAM_MEMBERS.filter((m) => m.role === "AMS_HEAD" || m.name.includes("Ernest Siega"));
+  // 1. AMS Head: Excluded from operational shift scheduling (null)
+  const amsHeads = teamList.filter((m) => m.role === "AMS_HEAD" || m.name.includes("Ernest Siega"));
   amsHeads.forEach((head) => {
     schedules[head.id] = null;
     roles[head.id] = "SUPPORT";
   });
 
   // 2. Team Leads (TLs): Mon-Fri Shift 1 (Day Shift 08:00 - 17:00), Sat-Sun OFF
-  const teamLeads = INITIAL_TEAM_MEMBERS.filter((m) => (m.role === "TEAM_LEAD" || m.name.startsWith("TL ")) && !amsHeads.some((h) => h.id === m.id));
+  const teamLeads = teamList.filter((m) => (m.role === "TEAM_LEAD" || m.name.startsWith("TL ")) && !amsHeads.some((h) => h.id === m.id));
   teamLeads.forEach((tl) => {
     schedules[tl.id] = isWeekend ? null : "st-1";
     roles[tl.id] = "SUPPORT";
   });
 
-  // 3. Support Engineers: 24/7 Zero-Gaps Staggered Roster
-  const engineers = INITIAL_TEAM_MEMBERS.filter((m) => !amsHeads.some((h) => h.id === m.id) && !teamLeads.some((t) => t.id === m.id));
+  // 3. Support Engineers: Dynamic 24/7 Zero-Gaps Staggered Roster based on current team list
+  const engineers = teamList.filter((m) => !amsHeads.some((h) => h.id === m.id) && !teamLeads.some((t) => t.id === m.id));
 
-  // Dedicated 24/7 Shift Allocation guaranteeing Shift 1, Shift 2, and Shift 3 coverage every day
-  engineers.forEach((m) => {
+  engineers.forEach((m, idx) => {
     roles[m.id] = "SUPPORT";
 
-    // Specific leave days from Google Sheet sample
-    if ((m.id === "eng-107" && (dayNumber === 8 || dayNumber === 9)) || (m.id === "eng-117" && (dayNumber === 26 || dayNumber === 27))) {
-      schedules[m.id] = "st-5"; // Leave
-      return;
-    }
+    // Staggered 5 working days / 2 off days rotation based on index in current team list
+    const shiftCategory = idx % 3; // 0 = Shift 1, 1 = Shift 2, 2 = Shift 3
+    const off1 = (idx * 2) % 7;
+    const off2 = (off1 + 1) % 7;
+    const isOff = dayOfWeek === off1 || dayOfWeek === off2;
 
-    if (m.name.includes("Keano Sevilla")) {
-      // Shift 3 (Nightly): Works Mon-Fri, Off Sat-Sun
-      schedules[m.id] = isWeekend ? null : "st-3";
-    } else if (m.name.includes("Khenidy Mohammad")) {
-      // Shift 3 (Nightly): Works Sun-Thu, Off Fri-Sat
-      schedules[m.id] = (dayOfWeek === 5 || dayOfWeek === 6) ? null : "st-3";
-    } else if (m.name.includes("Patrick Cinco")) {
-      // Shift 3 (Nightly) on Weekends (Fri/Sat/Sun) & Shift 2 on Weekdays
-      if (dayOfWeek === 5 || dayOfWeek === 6) {
-        schedules[m.id] = "st-3"; // Nightly coverage on Fri & Sat
-      } else {
-        schedules[m.id] = "st-2";
-      }
-    } else if (m.name.includes("Melkin Ayalin")) {
-      // Shift 2 (Evening): Works Sun-Thu, Off Fri-Sat
-      schedules[m.id] = (dayOfWeek === 5 || dayOfWeek === 6) ? null : "st-2";
-    } else if (m.name.includes("France Rebollos")) {
-      // Shift 2 (Evening): Works Tue-Sat, Off Sun-Mon
-      schedules[m.id] = (dayOfWeek === 0 || dayOfWeek === 1) ? null : "st-2";
-    } else if (m.name.includes("Mahmudi Ismael")) {
-      // Shift 2 (Evening) on Weekdays & Shift 1 on Weekends
-      schedules[m.id] = isWeekend ? "st-1" : "st-2";
-    } else if (m.name.includes("Joylyn Cubile")) {
-      // Shift 1 (Day): Works Mon-Fri, Off Sat-Sun
-      schedules[m.id] = isWeekend ? null : "st-1";
-    } else if (m.name.includes("Dwight Corpus")) {
-      // Shift 1 (Day): Works Sun-Thu, Off Fri-Sat
-      schedules[m.id] = (dayOfWeek === 5 || dayOfWeek === 6) ? null : "st-1";
+    if (isOff) {
+      schedules[m.id] = null;
     } else {
-      // Any additional engineers: Shift 1
-      schedules[m.id] = "st-1";
+      schedules[m.id] = shiftCategory === 0 ? "st-1" : shiftCategory === 1 ? "st-2" : "st-3";
+    }
+  });
+
+  // Zero-Gaps Guarantee: Ensure Shift 3, Shift 2, and Shift 1 always have active engineers
+  ["st-3", "st-2", "st-1"].forEach((shiftId) => {
+    const countOnShift = engineers.filter((m) => schedules[m.id] === shiftId).length;
+    if (countOnShift === 0 && engineers.length > 0) {
+      // Find an off-duty engineer or an available engineer to cover this empty shift slot
+      const candidate = engineers.find((m) => schedules[m.id] === null) || engineers.find((m) => schedules[m.id] === "st-1" && m.role !== "TEAM_LEAD");
+      if (candidate) {
+        schedules[candidate.id] = shiftId;
+      }
     }
   });
 
   // 4. GUARANTEE STRICTLY 1 PIC PER SHIFT EVERY DAY
   ["st-1", "st-2", "st-3"].forEach((shiftId) => {
-    // Find all active on-duty members for this shift on dateStr
-    const activeShiftMembers = INITIAL_TEAM_MEMBERS.filter((m) => schedules[m.id] === shiftId);
+    const activeShiftMembers = teamList.filter((m) => schedules[m.id] === shiftId);
     if (activeShiftMembers.length > 0) {
       // Pick deterministic PIC for this shift on this day
       const picIndex = (dayNumber + shiftId.charCodeAt(3)) % activeShiftMembers.length;
@@ -669,7 +655,7 @@ export default function AttendancePage() {
 
     // Auto-generate roster strictly for the active selected week (activeWeekDates: Mon - Sun)
     activeWeekDates.forEach((dateStr) => {
-      const generated = generateGoogleSheetRosterSchedule(dateStr);
+      const generated = generateGoogleSheetRosterSchedule(dateStr, scopedMembers);
       updatedSchedules[dateStr] = { ...(updatedSchedules[dateStr] || {}), ...generated.schedules };
       updatedDutyRoles[dateStr] = { ...(updatedDutyRoles[dateStr] || {}), ...generated.roles };
     });
