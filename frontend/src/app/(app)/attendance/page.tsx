@@ -67,14 +67,7 @@ const INITIAL_DATE_SCHEDULES: Record<string, Record<string, string | null>> = {
   },
 };
 
-const INITIAL_DATE_DUTY_ROLES: Record<string, Record<string, ShiftDutyRole>> = {
-  [TODAY_DATE_STR]: {
-    "eng-101": "PIC", "eng-102": "SUPPORT", "eng-103": "SUPPORT", "eng-104": "TECHNICAL_ADMIN", "eng-105": "SUPPORT",
-    "eng-106": "SUPPORT", "eng-107": "SUPPORT", "eng-108": "SUPPORT", "eng-109": "TECHNICAL_ADMIN", "eng-110": "SUPPORT",
-    "eng-111": "SUPPORT", "eng-112": "SUPPORT", "eng-113": "SUPPORT", "eng-114": "SUPPORT", "eng-115": "TECHNICAL_ADMIN",
-    "eng-116": "TECHNICAL_ADMIN", "eng-117": "TECHNICAL_ADMIN", "eng-118": "SUPPORT", "eng-119": "SUPPORT", "eng-120": "SUPPORT",
-  },
-};
+const INITIAL_DATE_DUTY_ROLES: Record<string, Record<string, ShiftDutyRole>> = {};
 
 interface PersonalAttendanceHistory {
   id: string;
