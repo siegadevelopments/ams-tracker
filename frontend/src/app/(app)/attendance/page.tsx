@@ -81,12 +81,10 @@ const generate247DateSchedule = (dateStr: string): Record<string, string | null>
   return schedule;
 };
 
-// Initial default schedule mapping for today's date
+// Initial default schedule mapping (Empty for testing)
 const TODAY_DATE_STR = new Date().toISOString().split("T")[0];
 
-const INITIAL_DATE_SCHEDULES: Record<string, Record<string, string | null>> = {
-  [TODAY_DATE_STR]: generate247DateSchedule(TODAY_DATE_STR),
-};
+const INITIAL_DATE_SCHEDULES: Record<string, Record<string, string | null>> = {};
 
 const INITIAL_DATE_DUTY_ROLES: Record<string, Record<string, ShiftDutyRole>> = {};
 
@@ -315,13 +313,19 @@ export default function AttendancePage() {
 
   const activeWeekDates = getWeekDates(selectedDate);
 
-  // Get active shift ID for a member on a specific date (Generates 24/7 roster if not explicitly set)
+  // Get active shift ID for a member on a specific date
   const getMemberShiftForDate = (memberId: string, dateStr: string): string | null => {
     if (dateSchedules[dateStr] && dateSchedules[dateStr][memberId] !== undefined) {
       return dateSchedules[dateStr][memberId];
     }
-    const generated = generate247DateSchedule(dateStr);
-    return generated[memberId] || null;
+    return null;
+  };
+
+  const handleClearAllSchedules = () => {
+    setDateSchedules({});
+    setDutyRoleSchedules({});
+    setSuccess("Wiped all schedule data. Roster is completely clear for testing!");
+    setTimeout(() => setSuccess(""), 4000);
   };
 
   // Get active shift duty role for a member on a specific date (Defaults to "SUPPORT")
@@ -683,10 +687,21 @@ export default function AttendancePage() {
                         handleAutoDivide3Shifts();
                         setShowAutoScheduleDropdown(false);
                       }}
-                      className="w-full text-left px-4 py-2.5 text-xs font-bold text-blue-600 hover:bg-blue-50 flex items-center justify-between cursor-pointer transition-colors"
+                      className="w-full text-left px-4 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 flex items-center justify-between cursor-pointer transition-colors"
                     >
                       <span>🔄 Divide Across All 3 Shifts</span>
                       <span className="text-[10px] text-blue-500 font-semibold">Equal Split</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleClearAllSchedules();
+                        setShowAutoScheduleDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center justify-between cursor-pointer transition-colors"
+                    >
+                      <span>🧹 Clear All Schedules</span>
+                      <span className="text-[10px] text-red-500 font-semibold">Reset</span>
                     </button>
                   </div>
                 </div>
