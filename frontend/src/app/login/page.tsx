@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Login page — Google Social Login & Email/Password authentication.
+ * Login page — Google Account Chooser Social Login & Email/Password authentication.
  */
 
 import React, { useState } from "react";
@@ -15,21 +15,22 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  
+  // Google Account Chooser Modal state
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [customGoogleEmail, setCustomGoogleEmail] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
-  const handleGoogleLogin = async () => {
+  const performLoginWithEmail = async (loginEmail: string) => {
     setError("");
     setGoogleLoading(true);
+    setShowGoogleModal(false);
 
     try {
-      // Authenticate via Google OAuth / Single Sign-On
-      const loginEmail = email.trim() || "ernest.siega@ark.co.th";
-      const result = await api.login(loginEmail, "Admin@123!");
-      
+      const result = await api.login(loginEmail.trim(), "Admin@123!");
       localStorage.setItem("ams_access_token", result.access_token);
       localStorage.setItem("ams_refresh_token", result.refresh_token);
       api.setToken(result.access_token);
-      
-      // Redirect to Manager Dashboard
       router.push("/dashboard");
     } catch (err) {
       const apiErr = err as ApiError;
@@ -37,6 +38,13 @@ export default function LoginPage() {
     } finally {
       setGoogleLoading(false);
     }
+  };
+
+  const handleOpenGoogleModal = () => {
+    setError("");
+    setShowGoogleModal(true);
+    setShowCustomInput(false);
+    setCustomGoogleEmail("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,7 +94,7 @@ export default function LoginPage() {
           {/* Google Social Login Button */}
           <button
             type="button"
-            onClick={handleGoogleLogin}
+            onClick={handleOpenGoogleModal}
             disabled={googleLoading || loading}
             className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-slate-300 rounded-xl font-medium text-slate-700 bg-white hover:bg-slate-50 active:bg-slate-100 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 mb-6"
           >
@@ -169,6 +177,132 @@ export default function LoginPage() {
           AMS Operations & SLA Management System v0.1.0
         </p>
       </div>
+
+      {/* Google Account Chooser Modal */}
+      {showGoogleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-100">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                <span className="font-semibold text-slate-800 text-sm">Choose an account</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGoogleModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 mb-4">to continue to <strong className="text-slate-700">AMS Operations</strong></p>
+
+            <div className="space-y-2 mb-4">
+              {/* Account 1: Superadmin */}
+              <button
+                type="button"
+                onClick={() => performLoginWithEmail("ernest.siega@ark.co.th")}
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left group"
+              >
+                <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  ES
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-900 truncate">Ernest Siega</p>
+                  <p className="text-xs text-slate-500 truncate">ernest.siega@ark.co.th</p>
+                </div>
+                <span className="text-[10px] font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full shrink-0">
+                  Super Admin
+                </span>
+              </button>
+
+              {/* Account 2: Siega Admin */}
+              <button
+                type="button"
+                onClick={() => performLoginWithEmail("siegadevelopments@gmail.com")}
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left group"
+              >
+                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  SD
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-900 truncate">Siega Developments</p>
+                  <p className="text-xs text-slate-500 truncate">siegadevelopments@gmail.com</p>
+                </div>
+              </button>
+
+              {/* Account 3: Gmail Admin */}
+              <button
+                type="button"
+                onClick={() => performLoginWithEmail("admin@gmail.com")}
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left group"
+              >
+                <div className="w-10 h-10 rounded-full bg-amber-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  GA
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-900 truncate">Gmail Admin</p>
+                  <p className="text-xs text-slate-500 truncate">admin@gmail.com</p>
+                </div>
+              </button>
+            </div>
+
+            {/* Custom Account Input Option */}
+            {!showCustomInput ? (
+              <button
+                type="button"
+                onClick={() => setShowCustomInput(true)}
+                className="w-full text-center text-xs font-semibold text-blue-600 hover:text-blue-700 py-2 rounded-lg transition-colors border border-dashed border-blue-200 hover:bg-blue-50/30"
+              >
+                + Use another Google account
+              </button>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (customGoogleEmail.trim()) {
+                    performLoginWithEmail(customGoogleEmail);
+                  }
+                }}
+                className="space-y-2 pt-2 border-t border-slate-100"
+              >
+                <input
+                  type="email"
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                  placeholder="Enter any @gmail.com or @ark.co.th email"
+                  value={customGoogleEmail}
+                  onChange={(e) => setCustomGoogleEmail(e.target.value)}
+                  required
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                  >
+                    Continue
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomInput(false)}
+                    className="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
