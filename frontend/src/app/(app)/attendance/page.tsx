@@ -440,6 +440,59 @@ export default function AttendancePage() {
     setTimeout(() => setSuccess(""), 5000);
   };
 
+  const handleAutoDivide3Shifts = () => {
+    if (scopedMembers.length === 0) {
+      setSuccess("No team members available in your domain to auto-schedule.");
+      return;
+    }
+
+    const updatedSchedules = { ...dateSchedules };
+    const startDate = new Date(selectedDate + "T00:00:00");
+    const daysCount = 7; // Auto-plots full week (7 days)
+
+    const SHIFT_IDS = ["st-1", "st-2", "st-3"];
+    const OFF_DAY_PATTERNS = [
+      { off1: 6, off2: 0 }, // Sat & Sun Off for Shift 1
+      { off1: 0, off2: 1 }, // Sun & Mon Off for Shift 2
+      { off1: 5, off2: 6 }, // Fri & Sat Off for Shift 3
+    ];
+
+    let shift1Count = 0;
+    let shift2Count = 0;
+    let shift3Count = 0;
+
+    scopedMembers.forEach((member, index) => {
+      const groupIndex = index % 3;
+      const targetShiftId = SHIFT_IDS[groupIndex];
+      const offPattern = OFF_DAY_PATTERNS[groupIndex];
+
+      if (groupIndex === 0) shift1Count++;
+      if (groupIndex === 1) shift2Count++;
+      if (groupIndex === 2) shift3Count++;
+
+      for (let i = 0; i < daysCount; i++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        const dateStr = currentDate.toISOString().split("T")[0];
+        const dayOfWeek = currentDate.getDay(); // 0..6
+
+        const isOffDay = dayOfWeek === offPattern.off1 || dayOfWeek === offPattern.off2;
+        const assignedShiftId = isOffDay ? "st-5" : targetShiftId;
+
+        if (!updatedSchedules[dateStr]) {
+          updatedSchedules[dateStr] = {};
+        }
+        updatedSchedules[dateStr][member.id] = assignedShiftId;
+      }
+    });
+
+    setDateSchedules(updatedSchedules);
+    setShowAutoScheduleModal(false);
+    const domainText = isAmsHead ? "Global Roster" : userDomain;
+    setSuccess(`Automatically divided ${scopedMembers.length} member(s) (${domainText}) across 3 shifts: Shift 1 (${shift1Count}), Shift 2 (${shift2Count}), Shift 3 (${shift3Count}) with 5-day work / 2-day off policy!`);
+    setTimeout(() => setSuccess(""), 6000);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -457,13 +510,14 @@ export default function AttendancePage() {
 
         {isLeadership && (
           <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
-            {/* Auto-Schedule 5:2 Roster Button */}
+            {/* Auto-Schedule 3-Shift Roster Button (Zero Inputs) */}
             <button
               type="button"
-              onClick={() => setShowAutoScheduleModal(true)}
+              onClick={handleAutoDivide3Shifts}
               className="px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Automatically divide team members across 3 shifts with 5:2 work/off roster"
             >
-              <span>+ Auto-Schedule 5:2 Roster</span>
+              <span>Auto-Schedule 3 Shifts</span>
             </button>
 
             {/* DATE PICKER & ROSTER DATE SWITCHER */}
