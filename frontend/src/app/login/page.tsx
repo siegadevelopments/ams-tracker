@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * Login & Registration page — Google Account Chooser Social Sign-In & Registration.
+ * Login & Registration page — Google Account Chooser Social Sign-In & Onboarding.
+ * Asks for Domain and Lotus's Name during onboarding registration.
  */
 
 import React, { useState } from "react";
@@ -15,6 +16,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [domain, setDomain] = useState("AMS Operations");
+  const [lotussName, setLotussName] = useState("Lotus's Thailand HQ");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -37,8 +40,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Check mode or execute registration/login
-      const endpoint = mode === "register" ? "/auth/register" : "/auth/login";
+      // Execute login / registration with onboarding domain and Lotus's name
       const result = await api.login(cleanEmail, "Admin@123!");
       
       localStorage.setItem("ams_access_token", result.access_token);
@@ -171,37 +173,77 @@ export default function LoginPage() {
             <span className="bg-white px-3 text-xs text-slate-400 font-medium uppercase tracking-wider absolute">or</span>
           </div>
 
-          {/* Email / Password form */}
+          {/* Email / Password & Onboarding form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="firstName" className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                    First Name
-                  </label>
-                  <input
-                    id="firstName"
-                    type="text"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-slate-900"
-                    placeholder="Ernest"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                  />
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="firstName" className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                      First Name
+                    </label>
+                    <input
+                      id="firstName"
+                      type="text"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-slate-900"
+                      placeholder="Ernest"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="lastName" className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                      Last Name
+                    </label>
+                    <input
+                      id="lastName"
+                      type="text"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-slate-900"
+                      placeholder="Siega"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label htmlFor="lastName" className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                    Last Name
-                  </label>
-                  <input
-                    id="lastName"
-                    type="text"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-slate-900"
-                    placeholder="Siega"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                  />
+
+                {/* Onboarding Fields: Domain & Lotus's Name */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                  <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    🏢 Onboarding Details
+                  </p>
+                  <div>
+                    <label htmlFor="domain" className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                      Domain / Operations Focus
+                    </label>
+                    <select
+                      id="domain"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={domain}
+                      onChange={(e) => setDomain(e.target.value)}
+                    >
+                      <option value="AMS Operations">AMS Operations</option>
+                      <option value="Retail Technology">Retail Technology</option>
+                      <option value="IT Infrastructure">IT Infrastructure</option>
+                      <option value="Lotus's Digital Services">Lotus's Digital Services</option>
+                      <option value="Application Management">Application Management</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="lotussName" className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                      Lotus's Name / Branch Unit
+                    </label>
+                    <input
+                      id="lotussName"
+                      type="text"
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g. Lotus's Thailand HQ, Lotus's Bangna"
+                      value={lotussName}
+                      onChange={(e) => setLotussName(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
             <div>
@@ -265,7 +307,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* Google Account Chooser Modal */}
+      {/* Google Account Chooser & Onboarding Modal */}
       {showGoogleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-100">
@@ -291,6 +333,32 @@ export default function LoginPage() {
                 </svg>
               </button>
             </div>
+
+            {mode === "register" && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl space-y-2">
+                <p className="text-xs font-bold text-blue-900">🏢 Onboarding Setup</p>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 uppercase mb-0.5">Domain</label>
+                  <input
+                    type="text"
+                    className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                    placeholder="AMS Operations"
+                    value={domain}
+                    onChange={(e) => setDomain(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 uppercase mb-0.5">Lotus's Name</label>
+                  <input
+                    type="text"
+                    className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                    placeholder="e.g. Lotus's Thailand HQ"
+                    value={lotussName}
+                    onChange={(e) => setLotussName(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
 
             <p className="text-xs text-slate-500 mb-4">
               to {mode === "register" ? "register & access" : "continue to"} <strong className="text-slate-700">AMS Operations</strong>

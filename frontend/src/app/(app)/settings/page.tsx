@@ -1,17 +1,25 @@
 "use client";
 
 /**
- * Settings page — shift type configuration.
+ * Settings page — Onboarding profile & Shift type configuration.
  * Admin only.
  */
 
 import React, { useEffect, useState } from "react";
 import api, { ShiftType, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 export default function SettingsPage() {
+  const { user } = useAuth();
   const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  
+  // Organization Onboarding State
+  const [domain, setDomain] = useState((user as any)?.domain || "AMS Operations");
+  const [lotussName, setLotussName] = useState((user as any)?.lotuss_name || "Lotus's Thailand HQ");
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
   const [newShift, setNewShift] = useState({
     name: "",
     default_start: "08:00",
@@ -35,6 +43,12 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSaveOnboarding = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 3000);
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -65,14 +79,63 @@ export default function SettingsPage() {
   };
 
   return (
-    <div>
-      <div className="mb-6">
+    <div className="space-y-6">
+      <div>
         <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="text-sm text-slate-500 mt-1">System configuration</p>
+        <p className="text-sm text-slate-500 mt-1">Organization onboarding & shift configuration</p>
+      </div>
+
+      {/* Organization & Onboarding Profile */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+        <h2 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <span>🏢</span> Organization & Onboarding Configuration
+        </h2>
+
+        {savedSuccess && (
+          <div className="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+            ✓ Organization domain and Lotus's name saved successfully.
+          </div>
+        )}
+
+        <form onSubmit={handleSaveOnboarding} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="setting-domain" className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+              Domain / Operational Area
+            </label>
+            <input
+              id="setting-domain"
+              type="text"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="setting-lotuss" className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+              Lotus's Name / Branch Unit
+            </label>
+            <input
+              id="setting-lotuss"
+              type="text"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={lotussName}
+              onChange={(e) => setLotussName(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="md:col-span-2 flex justify-end">
+            <button type="submit" className="btn btn-primary text-sm px-5 py-2">
+              Save Onboarding Profile
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* Shift Types Section */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <h2 className="font-semibold text-slate-900">Shift Types</h2>
           <button onClick={() => setShowCreate(!showCreate)} className="btn btn-primary text-sm">

@@ -12,6 +12,8 @@ const DEMO_USER = {
   last_name: "Siega",
   employee_id: "ADMIN-SA-001",
   role: "SUPER_ADMIN",
+  domain: "AMS Operations",
+  lotuss_name: "Lotus's Thailand HQ",
   timezone: "Asia/Manila",
   is_active: true,
 };
@@ -222,11 +224,15 @@ async function handleApiRequest(request: NextRequest, context: any) {
       let email = "";
       let firstName = "";
       let lastName = "";
+      let domain = "";
+      let lotussName = "";
       try {
         const body = await request.json();
         email = (body?.email || "").trim().toLowerCase();
         firstName = (body?.first_name || "").trim();
         lastName = (body?.last_name || "").trim();
+        domain = (body?.domain || "").trim();
+        lotussName = (body?.lotuss_name || "").trim();
       } catch {
         // Ignore json parse error
       }
@@ -250,6 +256,8 @@ async function handleApiRequest(request: NextRequest, context: any) {
         last_name: lastName || defaultLast,
         employee_id: `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
         role: "AMS_AGENT",
+        domain: domain || "AMS Operations",
+        lotuss_name: lotussName || "Lotus's Thailand HQ",
         timezone: "Asia/Manila",
         is_active: true,
       };
