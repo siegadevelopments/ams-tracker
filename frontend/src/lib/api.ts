@@ -2,11 +2,7 @@
  * API Client for AMS Operations & SLA Management System.
  */
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== "undefined" && window.location.hostname !== "localhost"
-    ? "/api/v1"
-    : "http://localhost:8000/api/v1");
+// Dynamic base URL is computed per-request in ApiClient.getBaseUrl()
 
 export class ApiError extends Error {
   status: number;
@@ -232,8 +228,21 @@ class ApiClient {
     return this.token;
   }
 
+  getBaseUrl(): string {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    if (typeof window !== "undefined") {
+      const hostname = window.location.hostname;
+      if (hostname === "localhost" || hostname === "127.0.0.1") {
+        return "http://localhost:8000/api/v1";
+      }
+    }
+    return "/api/v1";
+  }
+
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${this.getBaseUrl()}${endpoint}`;
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...(options.headers as Record<string, string>),
@@ -464,7 +473,7 @@ class ApiClient {
     const queryString = searchParams.toString();
     const token = typeof window !== "undefined" ? localStorage.getItem("ams_access_token") : null;
 
-    const response = await fetch(`${API_BASE_URL}/reports/${endpoint}/export${queryString ? `?${queryString}` : ""}`, {
+    const response = await fetch(`${this.getBaseUrl()}/reports/${endpoint}/export${queryString ? `?${queryString}` : ""}`, {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
