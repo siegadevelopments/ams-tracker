@@ -236,10 +236,7 @@ export async function GET(request: NextRequest) {
   const path = url.pathname.replace(/^\/api\/v1/, "");
 
   if (path === "/auth/me" || path === "/auth/me/") {
-    return NextResponse.json({
-      data: DEMO_USER,
-      message: "Authenticated",
-    });
+    return NextResponse.json(DEMO_USER);
   }
 
   if (path === "/users" || path === "/users/") {
@@ -327,9 +324,14 @@ export async function POST(request: NextRequest) {
 
   if (path === "/auth/login" || path === "/auth/login/") {
     return NextResponse.json({
+      access_token: "demo-jwt-token-ark-co-th",
+      refresh_token: "demo-refresh-token-ark-co-th",
+      token_type: "bearer",
+      user: DEMO_USER,
       data: {
         user: DEMO_USER,
         token: "demo-jwt-token-ark-co-th",
+        access_token: "demo-jwt-token-ark-co-th",
       },
       message: "Login successful",
     });

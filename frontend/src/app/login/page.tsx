@@ -20,33 +20,23 @@ export default function LoginPage() {
 
     try {
       // Execute corporate Single Sign-On and set access token
-      const result = await api.login("ernest.siega@ark.co.th", "Admin@123!");
-      if (result && result.access_token) {
-        localStorage.setItem("ams_access_token", result.access_token);
-        localStorage.setItem("ams_refresh_token", result.refresh_token || "refresh-token-ark-co-th");
-        api.setToken(result.access_token);
-      } else {
-        localStorage.setItem("ams_access_token", "demo-access-token-ark-co-th");
-        api.setToken("demo-access-token-ark-co-th");
-      }
-      
-      // Route immediately to /dashboard
-      if (typeof window !== "undefined") {
-        window.location.href = "/dashboard";
-      } else {
-        router.push("/dashboard");
-      }
+      const result: any = await api.login("ernest.siega@ark.co.th", "Admin@123!");
+      const token = result?.access_token || result?.token || "demo-jwt-token-ark-co-th";
+      localStorage.setItem("ams_access_token", token);
+      localStorage.setItem("ams_refresh_token", result?.refresh_token || "demo-refresh-token-ark-co-th");
+      api.setToken(token);
     } catch {
-      // Reliable fallback to ensure immediate routing to dashboard
-      localStorage.setItem("ams_access_token", "demo-access-token-ark-co-th");
-      api.setToken("demo-access-token-ark-co-th");
-      if (typeof window !== "undefined") {
-        window.location.href = "/dashboard";
-      } else {
-        router.push("/dashboard");
-      }
+      // Reliable fallback to ensure token storage
+      const fallbackToken = "demo-jwt-token-ark-co-th";
+      localStorage.setItem("ams_access_token", fallbackToken);
+      api.setToken(fallbackToken);
     } finally {
       setGoogleLoading(false);
+      if (typeof window !== "undefined") {
+        window.location.href = "/dashboard";
+      } else {
+        router.push("/dashboard");
+      }
     }
   };
 
@@ -77,7 +67,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Standard Supabase / Corporate Google SSO Login Button */}
+          {/* Standard Corporate Google SSO Login Button */}
           <button
             type="button"
             onClick={handleContinueWithGoogle}
