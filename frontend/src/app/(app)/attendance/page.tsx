@@ -272,7 +272,7 @@ export default function AttendancePage() {
   });
 
   const userRole = user?.role || "";
-  const isLeadership = ["AMS_HEAD", "SUPER_ADMIN", "TEAM_LEAD", "AMS_MANAGER"].includes(userRole);
+  const isLeadership = ["AMS_HEAD", "SUPER_ADMIN", "TEAM_LEAD"].includes(userRole);
   const isAmsHead = userRole === "AMS_HEAD" || userRole === "SUPER_ADMIN";
   const userDomain = (user as any)?.domain || "Supply chain and Planning Domain";
 
@@ -799,12 +799,12 @@ export default function AttendancePage() {
             </div>
           </div>
 
-          {/* Calendar Matrix Grid Table */}
+          {/* Transposed Calendar Matrix Grid Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[950px]">
               <thead>
                 <tr className="bg-slate-100/90 border-b border-slate-200 text-xs font-bold text-slate-700">
-                  <th className="py-3.5 px-4 w-64 border-r border-slate-200 sticky left-0 bg-slate-100 z-10">Team Member & Domain</th>
+                  <th className="py-3.5 px-4 w-60 border-r border-slate-200 sticky left-0 bg-slate-100 z-10">Shift Schedule & Hours</th>
                   {activeWeekDates.map((dateStr) => {
                     const dateObj = new Date(dateStr + "T00:00:00");
                     const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
@@ -832,77 +832,91 @@ export default function AttendancePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-xs">
-                {scopedMembers.map((member) => (
-                  <tr key={member.id} className="hover:bg-slate-50/80 transition-colors">
-                    {/* Member Details */}
-                    <td className="py-3 px-4 border-r border-slate-200 bg-slate-50/50 sticky left-0 z-10 shadow-xs">
+                {SHIFT_OPTIONS.map((shift) => (
+                  <tr key={shift.id} className="hover:bg-slate-50/60 transition-colors">
+                    {/* Shift Category Row Header */}
+                    <td className="py-4 px-4 border-r border-slate-200 bg-slate-50/80 sticky left-0 z-10 shadow-xs align-top">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-                          {member.name.charAt(0)}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-bold text-slate-900 truncate leading-tight">{member.name}</p>
-                          <p className="text-[10px] text-slate-500 truncate mt-0.5">{member.role.replace("_", " ")}</p>
+                        <span className={`w-3 h-3 rounded-full shrink-0 ${
+                          shift.id === "st-1" ? "bg-blue-600" :
+                          shift.id === "st-2" ? "bg-sky-500" :
+                          shift.id === "st-3" ? "bg-indigo-600" :
+                          shift.id === "st-4" ? "bg-purple-600" : "bg-red-500"
+                        }`}></span>
+                        <div>
+                          <h4 className="font-extrabold text-slate-900 text-xs flex items-center gap-1">
+                            {shift.id === "st-1" && "🌅"}
+                            {shift.id === "st-2" && "🌆"}
+                            {shift.id === "st-3" && "🌙"}
+                            {shift.id === "st-4" && "📚"}
+                            {shift.id === "st-5" && "🏖️"}
+                            <span>{shift.name}</span>
+                          </h4>
+                          <p className="text-[10px] text-slate-500 font-medium mt-0.5">{shift.time}</p>
                         </div>
                       </div>
                     </td>
 
-                    {/* 7 Days Matrix Cells */}
+                    {/* 7 Days Columns for this Shift */}
                     {activeWeekDates.map((dateStr) => {
-                      const shiftId = getMemberShiftForDate(member.id, dateStr);
-                      const dutyRole = getMemberDutyRoleForDate(member.id, dateStr);
+                      const assignedMembers = scopedMembers.filter(
+                        (m) => getMemberShiftForDate(m.id, dateStr) === shift.id
+                      );
                       const isSelectedDateCell = dateStr === selectedDate;
-                      const shiftObj = SHIFT_OPTIONS.find((s) => s.id === shiftId);
 
                       return (
                         <td
                           key={dateStr}
-                          onClick={() => {
-                            setQuickAssignCell({ memberId: member.id, memberName: member.name, dateStr });
-                          }}
-                          className={`p-2.5 border-r border-slate-200 text-center align-middle transition-all cursor-pointer hover:bg-blue-50/60 relative group ${
+                          className={`p-2.5 border-r border-slate-200 align-top transition-all relative group ${
                             isSelectedDateCell ? "bg-blue-50/20" : ""
                           }`}
                         >
-                          {shiftObj ? (
-                            <div className="flex flex-col items-center gap-1">
-                              <span
-                                className={`w-full py-1.5 px-2 rounded-xl font-extrabold text-[10px] shadow-xs flex items-center justify-center gap-1 transition-transform group-hover:scale-105 ${
-                                  shiftObj.id === "st-1"
-                                    ? "bg-blue-600 text-white"
-                                    : shiftObj.id === "st-2"
-                                    ? "bg-sky-500 text-white"
-                                    : shiftObj.id === "st-3"
-                                    ? "bg-indigo-600 text-white"
-                                    : shiftObj.id === "st-4"
-                                    ? "bg-purple-600 text-white"
-                                    : "bg-amber-500 text-white"
-                                }`}
-                              >
-                                {shiftObj.id === "st-1" && "🌅"}
-                                {shiftObj.id === "st-2" && "🌆"}
-                                {shiftObj.id === "st-3" && "🌙"}
-                                {shiftObj.id === "st-4" && "📚"}
-                                {shiftObj.id === "st-5" && "🏖️"}
-                                <span>{shiftObj.name}</span>
-                              </span>
-
-                              {/* Duty Role Designation Tag */}
-                              {dutyRole !== "SUPPORT" ? (
-                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
-                                  dutyRole === "PIC" ? "bg-purple-100 text-purple-900 border border-purple-300" : "bg-sky-100 text-sky-900 border border-sky-300"
-                                }`}>
-                                  {dutyRole === "PIC" ? "⭐ PIC" : "🛠️ Admin"}
-                                </span>
-                              ) : (
-                                <span className="text-[9px] text-slate-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                                  Support
-                                </span>
-                              )}
+                          {assignedMembers.length === 0 ? (
+                            <div
+                              onClick={() => setSelectedDate(dateStr)}
+                              className="py-3 px-2 rounded-xl border border-dashed border-slate-200 group-hover:border-blue-400 text-center text-[10px] text-slate-400 group-hover:text-blue-600 font-bold cursor-pointer transition-all"
+                            >
+                              — No Engineers
                             </div>
                           ) : (
-                            <div className="py-2.5 rounded-xl border border-dashed border-slate-200 group-hover:border-blue-400 text-[10px] text-slate-400 group-hover:text-blue-600 font-bold transition-all">
-                              💤 Off Duty
+                            <div className="space-y-1.5 min-h-[50px]">
+                              {assignedMembers.map((member) => {
+                                const dutyRole = getMemberDutyRoleForDate(member.id, dateStr);
+                                return (
+                                  <div
+                                    key={member.id}
+                                    onClick={() => {
+                                      setQuickAssignCell({ memberId: member.id, memberName: member.name, dateStr });
+                                    }}
+                                    className={`p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-2xs flex items-center justify-between gap-1.5 ${
+                                      shift.id === "st-1"
+                                        ? "bg-blue-50/90 border-blue-200 text-blue-900 hover:bg-blue-100 hover:border-blue-300"
+                                        : shift.id === "st-2"
+                                        ? "bg-sky-50/90 border-sky-200 text-sky-900 hover:bg-sky-100 hover:border-sky-300"
+                                        : shift.id === "st-3"
+                                        ? "bg-indigo-50/90 border-indigo-200 text-indigo-900 hover:bg-indigo-100 hover:border-indigo-300"
+                                        : shift.id === "st-4"
+                                        ? "bg-purple-50/90 border-purple-200 text-purple-900 hover:bg-purple-100 hover:border-purple-300"
+                                        : "bg-red-50/90 border-red-200 text-red-900 hover:bg-red-100 hover:border-red-300"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <div className="w-5 h-5 rounded-full bg-slate-900 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
+                                        {member.name.charAt(0)}
+                                      </div>
+                                      <span className="truncate text-[11px]">{member.name}</span>
+                                    </div>
+
+                                    {dutyRole !== "SUPPORT" && (
+                                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md shrink-0 ${
+                                        dutyRole === "PIC" ? "bg-purple-600 text-white" : "bg-sky-600 text-white"
+                                      }`}>
+                                        {dutyRole === "PIC" ? "⭐ PIC" : "🛠️ Admin"}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </td>
