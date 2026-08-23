@@ -17,26 +17,54 @@ interface MonthlyPlottedDay {
   shift_name: string;
   shift_time: string;
   is_rest_day: boolean;
+  is_leave: boolean;
   is_today: boolean;
   plotted_by: string;
 }
+
+// Dynamic Team Lead lookup per domain
+const DOMAIN_LEADS: Record<string, string> = {
+  "Supply chain and Planning Domain": "Maria Yilmaz",
+  "Store Ops, Sales": "Arnel Maala",
+  "Integration and Middleware Domain": "Mohammad Bari",
+  "Buy and Merchandise Domain": "Claire Acula",
+  "Finance": "Asher M. Taylor",
+};
+
+const getLeadForDomain = (domainStr: string): string => {
+  if (DOMAIN_LEADS[domainStr]) return DOMAIN_LEADS[domainStr];
+  for (const [dKey, leadName] of Object.entries(DOMAIN_LEADS)) {
+    if (domainStr.toLowerCase().includes(dKey.toLowerCase().split(" ")[0])) {
+      return leadName;
+    }
+  }
+  return "Maria Yilmaz"; // Default active Lead
+};
 
 // Generate realistic plotted schedule for the whole month (31 days)
 const generateMonthlyPlottedSchedule = (userDomain: string): MonthlyPlottedDay[] => {
   const result: MonthlyPlottedDay[] = [];
   const daysInMonth = 31;
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const leadName = getLeadForDomain(userDomain);
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateObj = new Date(2026, 7, d); // August 2026
     const dayOfWeek = dateObj.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const isToday = d === 23;
+    const isLeave = d === 12 || d === 28; // Approved Leave Days
 
-    // Pattern: 5 days on shift, 2 days rest
     let shiftName = "Shift 1";
     let shiftTime = "8:00 AM - 5:00 PM";
-    if (d % 7 === 1 || d % 7 === 2) {
+
+    if (isLeave) {
+      shiftName = "Leave";
+      shiftTime = "Vacation / Personal Leave";
+    } else if (isWeekend) {
+      shiftName = "Rest Day";
+      shiftTime = "—";
+    } else if (d % 7 === 1 || d % 7 === 2) {
       shiftName = "Shift 2";
       shiftTime = "2:00 PM - 11:00 PM";
     } else if (d % 7 === 3) {
@@ -51,11 +79,12 @@ const generateMonthlyPlottedSchedule = (userDomain: string): MonthlyPlottedDay[]
       date_str: `2026-08-${d < 10 ? "0" + d : d}`,
       day_name: dayNames[dayOfWeek],
       day_number: d,
-      shift_name: isWeekend ? "Rest Day" : shiftName,
-      shift_time: isWeekend ? "—" : shiftTime,
-      is_rest_day: isWeekend,
+      shift_name: shiftName,
+      shift_time: shiftTime,
+      is_rest_day: isWeekend && !isLeave,
+      is_leave: isLeave,
       is_today: isToday,
-      plotted_by: "Maria Santos (Team Lead)",
+      plotted_by: `${leadName} (Team Lead)`,
     });
   }
 
@@ -83,6 +112,54 @@ export default function MyShiftPage() {
 
   const userDomain = (user as any)?.domain || "Supply chain and Planning Domain";
   const monthlySchedule = generateMonthlyPlottedSchedule(userDomain);
+
+  // Live clock timer for shift lock calculation
+  const [now, setNow] = useState<Date>(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Determine target scheduled start time for today (Default 8:00 AM)
+  const getScheduledStartForToday = (): Date => {
+    const d = new Date();
+    let hour = 8;
+    let minute = 0;
+
+    const startStr = (todaySchedule as any)?.start_time || todaySchedule?.scheduled_start;
+    if (startStr) {
+      const timeParts = startStr.includes("T") ? startStr.split("T")[1].split(":") : startStr.split(":");
+      if (timeParts.length >= 2) {
+        hour = parseInt(timeParts[0], 10);
+        minute = parseInt(timeParts[1], 10);
+      }
+    }
+
+    d.setHours(hour, minute, 0, 0);
+    return d;
+  };
+
+  const scheduledStart = getScheduledStartForToday();
+  const allowedWindowStart = new Date(scheduledStart.getTime() - 15 * 60 * 1000); // 15 mins before shift
+  const isShiftUnlocked = now.getTime() >= allowedWindowStart.getTime();
+  const msRemaining = allowedWindowStart.getTime() - now.getTime();
+
+  const formatCountdown = (ms: number) => {
+    if (ms <= 0) return "0s";
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / (3600 * 24));
+    const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    parts.push(`${seconds}s`);
+    return parts.join(" ");
+  };
 
   const loadState = useCallback(async () => {
     try {
@@ -233,15 +310,41 @@ export default function MyShiftPage() {
                 ⏱️
               </div>
               <h2 className="text-xl font-bold text-slate-900 mb-1">Shift Not Started</h2>
-              <p className="text-xs text-slate-500 mb-6">
-                Your assigned schedule for today is <strong>Shift 1 (8:00 AM - 5:00 PM)</strong>. Click below to clock in.
+              <p className="text-xs text-slate-500 mb-4">
+                Your assigned schedule for today is <strong>Shift 1 (8:00 AM - 5:00 PM)</strong>.
               </p>
+
+              {/* 🔒 15-MINUTE SHIFT LOCK COUNTDOWN NOTICE */}
+              {!isShiftUnlocked ? (
+                <div className="mb-6 max-w-md mx-auto p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold shadow-xs flex flex-col items-center gap-1.5 animate-fade-in">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-800">
+                    <span className="text-base">🔒</span>
+                    <span>Start Shift Lock Active</span>
+                  </div>
+                  <p className="text-[11px] text-amber-700">
+                    Shift start opens <strong>15 minutes</strong> prior to your scheduled shift time (08:00 AM).
+                  </p>
+                  <div className="mt-1 px-3.5 py-1 bg-amber-200/80 border border-amber-300 rounded-full font-black text-amber-950 font-mono text-xs shadow-xs">
+                    ⏳ Starts in: {formatCountdown(msRemaining)}
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-6 max-w-md mx-auto p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold shadow-xs flex items-center justify-center gap-2">
+                  <span>✓</span>
+                  <span>Shift Window Open! You can now start your shift.</span>
+                </div>
+              )}
+
               <button
                 onClick={handleStartShift}
-                disabled={actionLoading}
-                className="btn btn-primary btn-lg px-8 shadow-md"
+                disabled={actionLoading || !isShiftUnlocked}
+                className={`btn btn-lg px-8 shadow-md transition-all ${
+                  isShiftUnlocked
+                    ? "btn-primary hover:bg-blue-700 cursor-pointer"
+                    : "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed shadow-none"
+                }`}
               >
-                {actionLoading ? "Starting..." : "▶ Start Shift"}
+                {actionLoading ? "Starting..." : !isShiftUnlocked ? `🔒 Shift Locked (${formatCountdown(msRemaining)})` : "▶ Start Shift Now"}
               </button>
             </div>
           ) : shiftStatus === "active" ? (
@@ -403,7 +506,7 @@ export default function MyShiftPage() {
               <h2 className="text-lg font-bold text-slate-900">My Plotted Monthly Shift Schedule</h2>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Full monthly roster plotted by Team Lead (Maria Santos) for {userDomain}
+              Full monthly roster plotted by Team Lead ({getLeadForDomain(userDomain)}) for {userDomain}
             </p>
           </div>
 
@@ -448,8 +551,10 @@ export default function MyShiftPage() {
               {monthlySchedule.map((item) => (
                 <div
                   key={item.day_number}
-                  className={`p-2.5 rounded-xl border flex flex-col justify-between transition-all min-h-[90px] ${
-                    item.is_today
+                  className={`p-2.5 rounded-xl border flex flex-col justify-between transition-all min-h-[95px] ${
+                    item.is_leave
+                      ? "bg-red-500 border-red-600 text-white shadow-md ring-2 ring-red-400/30"
+                      : item.is_today
                       ? "bg-blue-50 border-blue-400 ring-2 ring-blue-500/20"
                       : item.is_rest_day
                       ? "bg-slate-50/60 border-slate-200 opacity-70"
@@ -457,10 +562,14 @@ export default function MyShiftPage() {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs font-extrabold ${item.is_today ? "text-blue-700" : "text-slate-900"}`}>
+                    <span className={`text-xs font-black ${item.is_leave ? "text-white" : item.is_today ? "text-blue-700" : "text-slate-900"}`}>
                       {item.day_number}
                     </span>
-                    {item.is_today && (
+                    {item.is_leave ? (
+                      <span className="text-[9px] font-black text-red-700 bg-white px-1.5 py-0.5 rounded-full shadow-xs">
+                        🏖️ LEAVE
+                      </span>
+                    ) : item.is_today && (
                       <span className="text-[9px] font-bold text-white bg-blue-600 px-1.5 py-0.5 rounded-full">
                         TODAY
                       </span>
@@ -468,19 +577,19 @@ export default function MyShiftPage() {
                   </div>
 
                   <div className="mt-1">
-                    <p className={`text-[11px] font-bold truncate ${
-                      item.is_rest_day ? "text-slate-400" : "text-blue-600"
+                    <p className={`text-[11px] font-extrabold truncate ${
+                      item.is_leave ? "text-white font-black" : item.is_rest_day ? "text-slate-400" : "text-blue-600"
                     }`}>
                       {item.shift_name}
                     </p>
                     {!item.is_rest_day && (
-                      <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5">
+                      <p className={`text-[10px] font-medium truncate mt-0.5 ${item.is_leave ? "text-red-100 font-semibold" : "text-slate-500"}`}>
                         {item.shift_time}
                       </p>
                     )}
                   </div>
 
-                  <span className="text-[9px] text-slate-400 truncate mt-1 block">
+                  <span className={`text-[9px] truncate mt-1 block ${item.is_leave ? "text-red-100 font-semibold" : "text-slate-400"}`}>
                     Lead: {item.plotted_by.split(" ")[0]}
                   </span>
                 </div>
@@ -503,14 +612,14 @@ export default function MyShiftPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {monthlySchedule.map((item) => (
-                  <tr key={item.day_number} className={`hover:bg-slate-50/50 ${item.is_today ? "bg-blue-50/50" : ""}`}>
+                  <tr key={item.day_number} className={`hover:bg-slate-50/50 ${item.is_leave ? "bg-red-50/70 border-l-4 border-l-red-500" : item.is_today ? "bg-blue-50/50" : ""}`}>
                     <td className="py-3 px-4 text-xs font-bold text-slate-900">
                       August {item.day_number}, 2026
                     </td>
                     <td className="py-3 px-4 text-xs font-semibold text-slate-600">
                       {item.day_name}
                     </td>
-                    <td className="py-3 px-4 text-xs font-bold text-blue-600">
+                    <td className={`py-3 px-4 text-xs font-bold ${item.is_leave ? "text-red-600" : "text-blue-600"}`}>
                       {item.shift_name}
                     </td>
                     <td className="py-3 px-4 text-xs font-medium text-slate-500">
@@ -521,10 +630,11 @@ export default function MyShiftPage() {
                     </td>
                     <td className="py-3 px-4">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        item.is_leave ? "bg-red-600 text-white" :
                         item.is_today ? "bg-blue-600 text-white" :
                         item.is_rest_day ? "bg-slate-100 text-slate-500" : "bg-emerald-100 text-emerald-700"
                       }`}>
-                        {item.is_today ? "TODAY" : item.is_rest_day ? "REST DAY" : "PLOTTED"}
+                        {item.is_leave ? "🏖️ LEAVE" : item.is_today ? "TODAY" : item.is_rest_day ? "REST DAY" : "PLOTTED"}
                       </span>
                     </td>
                   </tr>
