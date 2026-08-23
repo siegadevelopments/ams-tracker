@@ -143,7 +143,7 @@ export default function TicketsPage() {
   // Handover Modal State
   const [handoverTicket, setHandoverTicket] = useState<Ticket | null>(null);
   const [selectedShiftTarget, setSelectedShiftTarget] = useState<"CURRENT" | "NEXT" | "PAST">("NEXT");
-  const [selectedTargetEmail, setSelectedTargetEmail] = useState(CORPORATE_ENGINEERS[3].email);
+  const [selectedTargetEmail, setSelectedTargetEmail] = useState(CORPORATE_ENGINEERS[0]?.email || "ernest.siega@ark.co.th");
   const [handoverNote, setHandoverNote] = useState("Please monitor for POG pending status. Check ix_spc_planogram query.");
 
   const [rawSlackText, setRawSlackText] = useState("");
