@@ -77,35 +77,48 @@ const generateGoogleSheetRosterSchedule = (dateStr: string): { schedules: Record
   // 3. Support Engineers: 24/7 Zero-Gaps Staggered Roster
   const engineers = INITIAL_TEAM_MEMBERS.filter((m) => !amsHeads.some((h) => h.id === m.id) && !teamLeads.some((t) => t.id === m.id));
 
-  engineers.forEach((m, idx) => {
+  // Dedicated 24/7 Shift Allocation guaranteeing Shift 1, Shift 2, and Shift 3 coverage every day
+  engineers.forEach((m) => {
+    roles[m.id] = "SUPPORT";
+
     // Specific leave days from Google Sheet sample
     if ((m.id === "eng-107" && (dayNumber === 8 || dayNumber === 9)) || (m.id === "eng-117" && (dayNumber === 26 || dayNumber === 27))) {
       schedules[m.id] = "st-5"; // Leave
-      roles[m.id] = "SUPPORT";
       return;
     }
 
-    const group = idx % 3;
-    if (group === 0) {
-      // Shift 1
-      const off1 = (idx * 2) % 7;
-      const off2 = (off1 + 1) % 7;
-      const isOff = dayOfWeek === off1 || dayOfWeek === off2;
-      schedules[m.id] = isOff ? null : "st-1";
-    } else if (group === 1) {
-      // Shift 2
-      const off1 = ((idx + 1) * 2) % 7;
-      const off2 = (off1 + 1) % 7;
-      const isOff = dayOfWeek === off1 || dayOfWeek === off2;
-      schedules[m.id] = isOff ? null : "st-2";
+    if (m.name.includes("Keano Sevilla")) {
+      // Shift 3 (Nightly): Works Mon-Fri, Off Sat-Sun
+      schedules[m.id] = isWeekend ? null : "st-3";
+    } else if (m.name.includes("Khenidy Mohammad")) {
+      // Shift 3 (Nightly): Works Sun-Thu, Off Fri-Sat
+      schedules[m.id] = (dayOfWeek === 5 || dayOfWeek === 6) ? null : "st-3";
+    } else if (m.name.includes("Patrick Cinco")) {
+      // Shift 3 (Nightly) on Weekends (Fri/Sat/Sun) & Shift 2 on Weekdays
+      if (dayOfWeek === 5 || dayOfWeek === 6) {
+        schedules[m.id] = "st-3"; // Nightly coverage on Fri & Sat
+      } else {
+        schedules[m.id] = "st-2";
+      }
+    } else if (m.name.includes("Melkin Ayalin")) {
+      // Shift 2 (Evening): Works Sun-Thu, Off Fri-Sat
+      schedules[m.id] = (dayOfWeek === 5 || dayOfWeek === 6) ? null : "st-2";
+    } else if (m.name.includes("France Rebollos")) {
+      // Shift 2 (Evening): Works Tue-Sat, Off Sun-Mon
+      schedules[m.id] = (dayOfWeek === 0 || dayOfWeek === 1) ? null : "st-2";
+    } else if (m.name.includes("Mahmudi Ismael")) {
+      // Shift 2 (Evening) on Weekdays & Shift 1 on Weekends
+      schedules[m.id] = isWeekend ? "st-1" : "st-2";
+    } else if (m.name.includes("Joylyn Cubile")) {
+      // Shift 1 (Day): Works Mon-Fri, Off Sat-Sun
+      schedules[m.id] = isWeekend ? null : "st-1";
+    } else if (m.name.includes("Dwight Corpus")) {
+      // Shift 1 (Day): Works Sun-Thu, Off Fri-Sat
+      schedules[m.id] = (dayOfWeek === 5 || dayOfWeek === 6) ? null : "st-1";
     } else {
-      // Shift 3 (Nightly)
-      const off1 = ((idx + 2) * 2) % 7;
-      const off2 = (off1 + 1) % 7;
-      const isOff = dayOfWeek === off1 || dayOfWeek === off2;
-      schedules[m.id] = isOff ? null : "st-3";
+      // Any additional engineers: Shift 1
+      schedules[m.id] = "st-1";
     }
-    roles[m.id] = "SUPPORT"; // Default to SUPPORT
   });
 
   // 4. GUARANTEE STRICTLY 1 PIC PER SHIFT EVERY DAY
