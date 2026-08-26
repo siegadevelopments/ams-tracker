@@ -633,7 +633,12 @@ export default function AttendancePage() {
       }
 
       membersToSchedule.forEach((member) => {
-        updatedSchedules[dateStr][member.id] = assignedShiftId;
+        if (member.role === "TEAM_LEAD") {
+          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+          updatedSchedules[dateStr][member.id] = isWeekend ? null : "st-1";
+        } else {
+          updatedSchedules[dateStr][member.id] = assignedShiftId;
+        }
       });
     }
 
@@ -662,13 +667,18 @@ export default function AttendancePage() {
         const currentDate = new Date(dateStr + "T00:00:00");
         const dayOfWeek = currentDate.getDay(); // 0 = Sun, 6 = Sat
 
-        const isOffDay = dayOfWeek === off1 || dayOfWeek === off2;
-        const assignedShiftId = isOffDay ? null : targetShiftId;
-
         if (!updatedSchedules[dateStr]) {
           updatedSchedules[dateStr] = {};
         }
-        updatedSchedules[dateStr][member.id] = assignedShiftId;
+
+        if (member.role === "TEAM_LEAD") {
+          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+          updatedSchedules[dateStr][member.id] = isWeekend ? null : "st-1";
+        } else {
+          const isOffDay = dayOfWeek === off1 || dayOfWeek === off2;
+          const assignedShiftId = isOffDay ? null : targetShiftId;
+          updatedSchedules[dateStr][member.id] = assignedShiftId;
+        }
       });
     });
 

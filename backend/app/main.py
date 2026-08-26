@@ -19,6 +19,7 @@ from app.core.exceptions import (
 )
 from contextlib import asynccontextmanager
 from app.services.init_db import init_db
+from app.routers import health, auth, users, teams, shifts, attendance, tickets, reports
 
 settings = get_settings()
 

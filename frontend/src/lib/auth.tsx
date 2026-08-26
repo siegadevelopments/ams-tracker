@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser();
 
     // Listen for Supabase OAuth auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
       if (event === "SIGNED_IN" && session?.user?.email) {
         try {
           const res = await api.login(session.user.email, "Admin@123!");
