@@ -423,6 +423,7 @@ export default function AttendancePage() {
 
   // Filter members according to domain scoping rules (Team Leads only see their domain members)
   const scopedMembers = teamMembers.filter((m) => {
+    if (m.role === "AMS_HEAD") return false;
     if (isAmsHead) return true;
     if (!m.domain || !userDomain) return true;
     return m.domain === userDomain || m.domain.toLowerCase().includes(userDomain.toLowerCase().split(" ")[0]);
