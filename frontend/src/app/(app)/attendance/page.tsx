@@ -342,9 +342,36 @@ export default function AttendancePage() {
 
     fetchRealUsers();
   }, [user]);
-  const [dateSchedules, setDateSchedules] = useState<Record<string, Record<string, string | null>>>(INITIAL_DATE_SCHEDULES);
-  const [dutyRoleSchedules, setDutyRoleSchedules] = useState<Record<string, Record<string, ShiftDutyRole>>>(INITIAL_DATE_DUTY_ROLES);
-  
+  const [dateSchedules, setDateSchedules] = useState<Record<string, Record<string, string | null>>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("attendance_dateSchedules");
+      if (saved) return JSON.parse(saved);
+    }
+    return INITIAL_DATE_SCHEDULES;
+  });
+
+  const [dutyRoleSchedules, setDutyRoleSchedules] = useState<Record<string, Record<string, ShiftDutyRole>>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("attendance_dutyRoleSchedules");
+      if (saved) return JSON.parse(saved);
+    }
+    return INITIAL_DATE_DUTY_ROLES;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("attendance_dateSchedules", JSON.stringify(dateSchedules));
+    }
+  }, [dateSchedules]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("attendance_dutyRoleSchedules", JSON.stringify(dutyRoleSchedules));
+    }
+  }, [dutyRoleSchedules]);
+
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [draggedMemberId, setDraggedMemberId] = useState<string | null>(null);
   const [dragOverShiftId, setDragOverShiftId] = useState<string | null>(null);
   const [dragOverCell, setDragOverCell] = useState<{ shiftId: string; dateStr: string } | null>(null);
@@ -423,7 +450,7 @@ export default function AttendancePage() {
 
   // Filter members according to domain scoping rules (Team Leads only see their domain members)
   const scopedMembers = teamMembers.filter((m) => {
-    if (m.role === "AMS_HEAD") return false;
+    if (m.role === "AMS_HEAD" || m.role === "SUPER_ADMIN" || m.name.includes("Ernest Siega")) return false;
     if (isAmsHead) return true;
     if (!m.domain || !userDomain) return true;
     return m.domain === userDomain || m.domain.toLowerCase().includes(userDomain.toLowerCase().split(" ")[0]);

@@ -316,25 +316,53 @@ export async function GET(request: NextRequest) {
 
   if (path === "/attendance/team-status" || path === "/attendance/team-status/") {
     const activeEngineers = teamMembersStore.filter(u => u.role !== "AMS_HEAD");
+    
+    // Simulate real-time data by using the current timestamp
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    
+    const employees = activeEngineers.map((u, i) => {
+      let status = "WORKING";
+      let actualStart = new Date(now.getTime() - 1000 * 60 * 60 * (i + 1)).toISOString(); // started hours ago
+      let lateMinutes = 0;
+      
+      // Introduce dynamic variance
+      if (i === 1) {
+        status = "ON_BREAK";
+      } else if (i === 2) {
+        status = "LATE";
+        lateMinutes = 15;
+        actualStart = new Date(now.getTime() - 1000 * 60 * 15).toISOString(); // started 15 mins ago, but late
+      } else if (i === 3) {
+        status = "NOT_STARTED";
+        actualStart = "";
+      } else if (i === 4) {
+        status = "ABSENT";
+        actualStart = "";
+      }
+
+      return {
+        user_id: u.id,
+        user_name: `${u.first_name} ${u.last_name}`,
+        employee_id: u.employee_id,
+        shift_type: "Shift 1 (8AM - 5PM)",
+        scheduled_start: "08:00",
+        scheduled_end: "17:00",
+        actual_start: actualStart,
+        status: status,
+        late_minutes: lateMinutes,
+      };
+    });
+
     return NextResponse.json({
       data: {
-        total_members: activeEngineers.length,
-        working: activeEngineers.length - 2,
-        late: 1,
-        on_break: 1,
-        not_started: 0,
-        absent: 0,
-        employees: activeEngineers.map(u => ({
-          user_id: u.id,
-          user_name: `${u.first_name} ${u.last_name}`,
-          employee_id: u.employee_id,
-          shift_type: "Shift 1 (8AM - 5PM)",
-          scheduled_start: "08:00",
-          scheduled_end: "17:00",
-          actual_start: "08:00",
-          status: "WORKING",
-          late_minutes: 0,
-        })),
+        total_members: employees.length,
+        working: employees.filter(e => e.status === "WORKING").length,
+        late: employees.filter(e => e.status === "LATE").length,
+        on_break: employees.filter(e => e.status === "ON_BREAK").length,
+        not_started: employees.filter(e => e.status === "NOT_STARTED").length,
+        absent: employees.filter(e => e.status === "ABSENT").length,
+        employees: employees,
       },
     });
   }

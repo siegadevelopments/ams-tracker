@@ -374,6 +374,38 @@ class ApiClient {
     return this.request<{ data: ShiftSchedule[] }>(endpoint);
   }
 
+  async listSchedules(params?: {
+    start_date?: string;
+    end_date?: string;
+    user_id?: string;
+    team_id?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<{ data: ShiftSchedule[]; pagination: PaginationMeta }> {
+    const searchParams = new URLSearchParams();
+    if (params?.start_date) searchParams.set("start_date", params.start_date);
+    if (params?.end_date) searchParams.set("end_date", params.end_date);
+    if (params?.user_id) searchParams.set("user_id", params.user_id);
+    if (params?.team_id) searchParams.set("team_id", params.team_id);
+    if (params?.page) searchParams.set("page", params.page.toString());
+    if (params?.page_size) searchParams.set("page_size", params.page_size.toString());
+
+    const queryString = searchParams.toString();
+    const endpoint = `/shifts/schedules${queryString ? `?${queryString}` : ""}`;
+    return this.request<{ data: ShiftSchedule[]; pagination: PaginationMeta }>(endpoint);
+  }
+
+  async createSchedule(data: {
+    user_id: string;
+    shift_type_id: string;
+    shift_date: string;
+  }): Promise<{ data: ShiftSchedule }> {
+    return this.request<{ data: ShiftSchedule }>("/shifts/schedules", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   // Teams
   async listTeams(): Promise<{ data: Team[] }> {
     return this.request<{ data: Team[] }>("/teams");
